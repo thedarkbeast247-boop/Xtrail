@@ -5,6 +5,11 @@ import { TrailDetail } from './pages/TrailDetail';
 import { RecordRide } from './pages/RecordRide';
 import { Subscription } from './pages/Subscription';
 import { Profile } from './pages/Profile';
+import { ServiceLog } from './pages/ServiceLog';
+import { Friends } from './pages/Friends';
+import { ProgressDashboard } from './pages/ProgressDashboard';
+import { Achievements } from './pages/Achievements';
+import { Garage } from './pages/Garage';
 
 export const router = createBrowserRouter([
   {
@@ -44,6 +49,46 @@ export const router = createBrowserRouter([
     Component: () => (
       <Layout>
         <Profile />
+      </Layout>
+    ),
+  },
+  {
+    path: '/service-log',
+    Component: () => (
+      <Layout>
+        <ServiceLog />
+      </Layout>
+    ),
+  },
+  {
+    path: '/friends',
+    Component: () => (
+      <Layout>
+        <Friends />
+      </Layout>
+    ),
+  },
+  {
+    path: '/progress',
+    Component: () => (
+      <Layout>
+        <ProgressDashboard />
+      </Layout>
+    ),
+  },
+  {
+    path: '/achievements',
+    Component: () => (
+      <Layout>
+        <Achievements />
+      </Layout>
+    ),
+  },
+  {
+    path: '/garage',
+    Component: () => (
+      <Layout>
+        <Garage />
       </Layout>
     ),
   },

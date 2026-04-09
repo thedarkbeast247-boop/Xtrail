@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, LogOut, Calendar, Crown, Plus, MapPin, Bookmark, CheckCircle2, Clock, TrendingUp, Award, Target, Star, Trophy } from 'lucide-react';
+import { Settings, LogOut, Calendar, Crown, Plus, MapPin, Bookmark, CheckCircle2, Clock, TrendingUp, Award, Target, Star, Trophy, Wrench, Users, ChevronRight, BarChart3, Car } from 'lucide-react';
 import { Link } from 'react-router';
 import { mockUser, mockVehicleProfiles, mockTrails, VehicleProfile } from '../data/mockData';
 import { Button } from '../components/ui/button';
@@ -77,6 +77,66 @@ export function Profile() {
       </div>
 
       <div className="px-4 py-5 space-y-6">
+        {/* Feature Buttons Row */}
+        <div>
+          <h2 className="text-white mb-3">Quick Access</h2>
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4">
+            <Link to="/service-log" className="flex-shrink-0">
+              <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-3 w-24 hover:border-neutral-700 transition-colors">
+                <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center mx-auto mb-2">
+                  <Wrench className="w-5 h-5 text-orange-500" />
+                </div>
+                <div className="text-white text-xs text-center">Service Log</div>
+              </div>
+            </Link>
+
+            <Link to="/friends" className="flex-shrink-0">
+              <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-3 w-24 hover:border-neutral-700 transition-colors">
+                <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center mx-auto mb-2">
+                  <Users className="w-5 h-5 text-blue-500" />
+                </div>
+                <div className="text-white text-xs text-center">Friends</div>
+              </div>
+            </Link>
+
+            <Link to="/" className="flex-shrink-0">
+              <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-3 w-24 hover:border-neutral-700 transition-colors">
+                <div className="w-10 h-10 bg-emerald-500/20 rounded-lg flex items-center justify-center mx-auto mb-2">
+                  <MapPin className="w-5 h-5 text-emerald-500" />
+                </div>
+                <div className="text-white text-xs text-center">Trails</div>
+              </div>
+            </Link>
+
+            <Link to="/progress" className="flex-shrink-0">
+              <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-3 w-24 hover:border-neutral-700 transition-colors">
+                <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center mx-auto mb-2">
+                  <BarChart3 className="w-5 h-5 text-purple-500" />
+                </div>
+                <div className="text-white text-xs text-center">Progress</div>
+              </div>
+            </Link>
+
+            <Link to="/achievements" className="flex-shrink-0">
+              <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-3 w-24 hover:border-neutral-700 transition-colors">
+                <div className="w-10 h-10 bg-amber-500/20 rounded-lg flex items-center justify-center mx-auto mb-2">
+                  <Trophy className="w-5 h-5 text-amber-500" />
+                </div>
+                <div className="text-white text-xs text-center">Achievements</div>
+              </div>
+            </Link>
+
+            <Link to="/garage" className="flex-shrink-0">
+              <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-3 w-24 hover:border-neutral-700 transition-colors">
+                <div className="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center mx-auto mb-2">
+                  <Car className="w-5 h-5 text-red-500" />
+                </div>
+                <div className="text-white text-xs text-center">Garage</div>
+              </div>
+            </Link>
+          </div>
+        </div>
+
         {/* Vehicle Selector */}
         <div>
           <div className="flex items-center justify-between mb-3">
