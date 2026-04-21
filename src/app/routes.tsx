@@ -10,6 +10,11 @@ import { Friends } from './pages/Friends';
 import { ProgressDashboard } from './pages/ProgressDashboard';
 import { Achievements } from './pages/Achievements';
 import { Garage } from './pages/Garage';
+import { VehicleDetail } from './pages/VehicleDetail';
+import { RideHistory } from './pages/RideHistory';
+import { RideDetail } from './pages/RideDetail';
+import { SavedTrails } from './pages/SavedTrails';
+import { CompletedTrails } from './pages/CompletedTrails';
 
 export const router = createBrowserRouter([
   {
@@ -89,6 +94,46 @@ export const router = createBrowserRouter([
     Component: () => (
       <Layout>
         <Garage />
+      </Layout>
+    ),
+  },
+  {
+    path: '/garage/:vehicleId',
+    Component: () => (
+      <Layout>
+        <VehicleDetail />
+      </Layout>
+    ),
+  },
+  {
+    path: '/ride-history',
+    Component: () => (
+      <Layout>
+        <RideHistory />
+      </Layout>
+    ),
+  },
+  {
+    path: '/ride-history/:rideId',
+    Component: () => (
+      <Layout>
+        <RideDetail />
+      </Layout>
+    ),
+  },
+  {
+    path: '/saved-trails',
+    Component: () => (
+      <Layout>
+        <SavedTrails />
+      </Layout>
+    ),
+  },
+  {
+    path: '/completed-trails',
+    Component: () => (
+      <Layout>
+        <CompletedTrails />
       </Layout>
     ),
   },
