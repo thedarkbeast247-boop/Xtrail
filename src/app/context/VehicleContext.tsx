@@ -24,6 +24,7 @@ interface CreateVehicleInput {
   mileage?: number;
   notes?: string;
   image?: string;
+  bannerImage?: string;
 }
 
 interface UpdateVehicleInput {
@@ -36,6 +37,7 @@ interface UpdateVehicleInput {
   mileage?: number;
   notes?: string;
   image?: string;
+  bannerImage?: string;
 }
 
 interface VehicleContextValue {
@@ -64,6 +66,7 @@ function createVehicle(input: CreateVehicleInput): Vehicle {
     mileage: input.mileage ?? 0,
     notes: input.notes ?? "",
     image: input.image ?? "",
+    bannerImage: input.bannerImage ?? "",
     createdAt: now,
     updatedAt: now,
   };

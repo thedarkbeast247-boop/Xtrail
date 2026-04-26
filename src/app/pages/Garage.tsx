@@ -76,6 +76,7 @@ export function Garage() {
     mileage: 0,
     notes: "",
     image: "",
+    bannerImage: "",
     color: "#ef4444",
   });
 
@@ -92,10 +93,11 @@ export function Garage() {
     mileage: 0,
     notes: "",
     image: "",
+    bannerImage: "",
   });
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-  const file = event.target.files?.[0];
+    const file = event.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
@@ -117,8 +119,35 @@ export function Garage() {
     reader.readAsDataURL(file);
   };
 
+  const handleBannerImageUpload = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("Please upload an image file.");
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setNewVehicle((prev) => ({
+          ...prev,
+          bannerImage: reader.result as string,
+        }));
+      }
+    };
+
+    reader.readAsDataURL(file);
+  };
+
+  
+
   const handleEditImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-  const file = event.target.files?.[0];
+    const file = event.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
@@ -140,6 +169,31 @@ export function Garage() {
     reader.readAsDataURL(file);
   };
 
+  const handleEditBannerImageUpload = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("Please upload an image file.");
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setEditVehicle((prev) => ({
+          ...prev,
+          bannerImage: reader.result as string,
+        }));
+      }
+    };
+
+    reader.readAsDataURL(file);
+  };
+
   const handleOpenEditVehicle = (vehicle: {
     id: string;
     name: string;
@@ -151,6 +205,7 @@ export function Garage() {
     mileage: number;
     notes?: string;
     image?: string;
+    bannerImage?: string;
   }) => {
     setEditingVehicleId(vehicle.id);
     setEditVehicle({
@@ -163,6 +218,7 @@ export function Garage() {
       mileage: vehicle.mileage,
       notes: vehicle.notes ?? "",
       image: vehicle.image ?? "",
+      bannerImage: vehicle.bannerImage ?? "",
     });
     setIsEditModalOpen(true);
   };
@@ -183,6 +239,7 @@ export function Garage() {
       mileage: Number(newVehicle.mileage),
       notes: newVehicle.notes.trim(),
       image: newVehicle.image,
+      bannerImage: newVehicle.bannerImage,
     });
 
     setIsAddModalOpen(false);
@@ -197,6 +254,7 @@ export function Garage() {
       notes: "",
       color: "#ef4444",
       image: "",
+      bannerImage: "",
     });
   };
 
@@ -223,6 +281,7 @@ export function Garage() {
       mileage: Number(editVehicle.mileage),
       notes: editVehicle.notes.trim(),
       image: editVehicle.image,
+      bannerImage: editVehicle.bannerImage,
     });
 
     setIsEditModalOpen(false);
@@ -375,7 +434,8 @@ export function Garage() {
                     className="bg-neutral-800 border-neutral-700 text-white mt-1"
                   />
                 </div>
-
+                
+                {/* Image upload */}
                 <div>
                   <Label className="text-neutral-300">Vehicle Photo</Label>
 
@@ -386,6 +446,27 @@ export function Garage() {
                     onChange={handleImageUpload}
                     className="hidden"
                   />
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-white">Banner Image</label>
+
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleBannerImageUpload}
+                      className="block w-full text-sm text-neutral-400 file:mr-4 file:rounded-xl file:border-0 file:bg-neutral-800 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-neutral-700"
+                    />
+
+                    {newVehicle.bannerImage && (
+                      <div className="overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900">
+                        <img
+                          src={newVehicle.bannerImage}
+                          alt="Banner preview"
+                          className="h-32 w-full object-cover"
+                        />
+                      </div>
+                    )}
+                  </div>
 
                   <div className="mt-2 space-y-3">
                     <Button
@@ -739,6 +820,7 @@ export function Garage() {
                 className="hidden"
               />
 
+              {/* Vehicle Image Upload */}
               <div className="mt-2 space-y-3">
                 <Button
                   type="button"
@@ -755,6 +837,28 @@ export function Garage() {
                       src={editVehicle.image}
                       alt="Vehicle preview"
                       className="w-full h-40 object-cover"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Banner Image Upload */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-white">Banner Image</label>
+
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleEditBannerImageUpload}
+                  className="block w-full text-sm text-neutral-400 file:mr-4 file:rounded-xl file:border-0 file:bg-neutral-800 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-neutral-700"
+                />
+
+                {editVehicle.bannerImage && (
+                  <div className="overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900">
+                    <img
+                      src={editVehicle.bannerImage}
+                      alt="Banner preview"
+                      className="h-32 w-full object-cover"
                     />
                   </div>
                 )}

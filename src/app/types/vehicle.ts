@@ -17,6 +17,7 @@ export interface Vehicle {
   mileage: number;
   notes?: string;
   image?: string;
+  bannerImage?: string;
   createdAt: string;
   updatedAt: string;
 }
