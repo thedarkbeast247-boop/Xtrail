@@ -6,7 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { Vehicle } from "../types/vehicle";
+import type { Vehicle, VehicleSetupProfile } from "../types/vehicle";
 import {
   loadActiveVehicleId,
   loadVehicles,
@@ -21,10 +21,13 @@ interface CreateVehicleInput {
   model: string;
   year: number;
   hours?: number;
+  hoursAtPurchase?: number;
+  manualAddedHours?: number;
   mileage?: number;
   notes?: string;
   image?: string;
   bannerImage?: string;
+  setupProfile?: VehicleSetupProfile;
 }
 
 interface UpdateVehicleInput {
@@ -34,10 +37,13 @@ interface UpdateVehicleInput {
   model?: string;
   year?: number;
   hours?: number;
+  hoursAtPurchase?: number;
+  manualAddedHours?: number;
   mileage?: number;
   notes?: string;
   image?: string;
   bannerImage?: string;
+  setupProfile?: VehicleSetupProfile;
 }
 
 interface VehicleContextValue {
@@ -62,11 +68,14 @@ function createVehicle(input: CreateVehicleInput): Vehicle {
     brand: input.brand,
     model: input.model,
     year: input.year,
-    hours: input.hours ?? 0,
+    hours: input.hoursAtPurchase ?? input.hours ?? 0,
+    hoursAtPurchase: input.hoursAtPurchase ?? input.hours ?? 0,
+    manualAddedHours: input.manualAddedHours ?? 0,
     mileage: input.mileage ?? 0,
     notes: input.notes ?? "",
     image: input.image ?? "",
     bannerImage: input.bannerImage ?? "",
+    setupProfile: input.setupProfile ?? {},
     createdAt: now,
     updatedAt: now,
   };

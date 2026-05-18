@@ -73,6 +73,8 @@ export function Garage() {
     model: "",
     year: new Date().getFullYear(),
     hours: 0,
+    hoursAtPurchase: 0,
+    manualAddedHours: 0,
     mileage: 0,
     notes: "",
     image: "",
@@ -90,6 +92,8 @@ export function Garage() {
     model: "",
     year: new Date().getFullYear(),
     hours: 0,
+    hoursAtPurchase: 0,
+    manualAddedHours: 0,
     mileage: 0,
     notes: "",
     image: "",
@@ -202,6 +206,8 @@ export function Garage() {
     model: string;
     year: number;
     hours: number;
+    hoursAtPurchase?: number;
+    manualAddedHours?: number;
     mileage: number;
     notes?: string;
     image?: string;
@@ -214,7 +220,9 @@ export function Garage() {
       brand: vehicle.brand,
       model: vehicle.model,
       year: vehicle.year,
-      hours: vehicle.hours,
+      hours: vehicle.hoursAtPurchase ?? vehicle.hours,
+      hoursAtPurchase: vehicle.hoursAtPurchase ?? vehicle.hours,
+      manualAddedHours: vehicle.manualAddedHours ?? 0,
       mileage: vehicle.mileage,
       notes: vehicle.notes ?? "",
       image: vehicle.image ?? "",
@@ -235,7 +243,9 @@ export function Garage() {
       brand: newVehicle.brand.trim(),
       model: newVehicle.model.trim(),
       year: Number(newVehicle.year),
-      hours: Number(newVehicle.hours),
+      hours: Number(newVehicle.hoursAtPurchase),
+      hoursAtPurchase: Number(newVehicle.hoursAtPurchase),
+      manualAddedHours: Number(newVehicle.manualAddedHours),
       mileage: Number(newVehicle.mileage),
       notes: newVehicle.notes.trim(),
       image: newVehicle.image,
@@ -250,6 +260,8 @@ export function Garage() {
       model: "",
       year: new Date().getFullYear(),
       hours: 0,
+      hoursAtPurchase: 0,
+      manualAddedHours: 0,
       mileage: 0,
       notes: "",
       color: "#ef4444",
@@ -277,7 +289,9 @@ export function Garage() {
       brand: editVehicle.brand.trim(),
       model: editVehicle.model.trim(),
       year: Number(editVehicle.year),
-      hours: Number(editVehicle.hours),
+      hours: Number(editVehicle.hoursAtPurchase),
+      hoursAtPurchase: Number(editVehicle.hoursAtPurchase),
+      manualAddedHours: Number(editVehicle.manualAddedHours),
       mileage: Number(editVehicle.mileage),
       notes: editVehicle.notes.trim(),
       image: editVehicle.image,
@@ -393,18 +407,42 @@ export function Garage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-neutral-300">Hours</Label>
+                    <Label className="text-neutral-300">Hours at purchase</Label>
                     <Input
                       type="number"
-                      value={newVehicle.hours}
+                      value={newVehicle.hoursAtPurchase}
+                      onChange={(event) =>
+                        setNewVehicle((prev) => ({
+                          ...prev,
+                          hours: Number(event.target.value),
+                          hoursAtPurchase: Number(event.target.value),
+                        }))
+                      }
+                      className="bg-neutral-800 border-neutral-700 text-white mt-1"
+                    />
+                    <p className="text-xs text-neutral-500">
+                      Enter the engine hours already on the vehicle when you bought it.
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label className="text-neutral-300">Manual added hours</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={newVehicle.manualAddedHours}
                       onChange={(e) =>
                         setNewVehicle({
                           ...newVehicle,
-                          hours: Number(e.target.value),
+                          manualAddedHours: Number(e.target.value),
                         })
                       }
                       className="bg-neutral-800 border-neutral-700 text-white mt-1"
                     />
+                    <p className="mt-1 text-xs text-neutral-500">
+                      Extra engine hours ridden outside Xtrail after you bought the vehicle.
+                    </p>
                   </div>
 
                   <div>
@@ -660,7 +698,10 @@ export function Garage() {
                         </Button>
                       )}
 
-                      <Link to={`/garage/${vehicle.id}`} onClick={() => setActiveVehicleId(vehicle.id)}>
+                      <Link
+                        to={`/garage/${vehicle.id}`}
+                        onClick={(event) => event.stopPropagation()}
+                      >
                         <Button
                           size="sm"
                           variant="outline"
@@ -768,18 +809,42 @@ export function Garage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-neutral-300">Hours</Label>
+                <Label className="text-neutral-300">Hours at purchase</Label>
                 <Input
                   type="number"
-                  value={editVehicle.hours}
+                  value={editVehicle.hoursAtPurchase}
+                  onChange={(event) =>
+                    setEditVehicle((prev) => ({
+                      ...prev,
+                      hours: Number(event.target.value),
+                      hoursAtPurchase: Number(event.target.value),
+                    }))
+                  }
+                  className="bg-neutral-800 border-neutral-700 text-white mt-1"
+                />
+                <p className="text-xs text-neutral-500">
+                  Engine hours already on the vehicle when you bought it.
+                </p>
+              </div>
+
+              <div>
+                <Label className="text-neutral-300">Manual added hours</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={editVehicle.manualAddedHours}
                   onChange={(e) =>
                     setEditVehicle({
                       ...editVehicle,
-                      hours: Number(e.target.value),
+                      manualAddedHours: Number(e.target.value),
                     })
                   }
                   className="bg-neutral-800 border-neutral-700 text-white mt-1"
                 />
+                <p className="mt-1 text-xs text-neutral-500">
+                  Extra engine hours ridden outside Xtrail after you bought the vehicle.
+                </p>
               </div>
 
               <div>

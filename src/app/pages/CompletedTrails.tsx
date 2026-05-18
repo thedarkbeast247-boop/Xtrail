@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { ArrowLeft, CheckCircle2, MapPin, Mountain } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { mockTrails } from "../data/mockData";
 import type { CompletedTrail } from "../types/completedTrail";
+import { useVehicles } from "../context/VehicleContext";
+import type { SavedRide } from "../utils/rideStats";
 
 type CompletedTrailGroup = {
   trailId: string;
@@ -16,6 +18,14 @@ type CompletedTrailGroup = {
 
 export function CompletedTrails() {
   const [completedTrails, setCompletedTrails] = useState<CompletedTrail[]>([]);
+  const [savedRides, setSavedRides] = useState<SavedRide[]>([]);
+
+  const [searchParams] = useSearchParams();
+  const vehicleIdFromUrl = searchParams.get("vehicleId");
+
+  const { vehicles } = useVehicles();
+  const selectedVehicle =
+    vehicles.find((vehicle) => vehicle.id === vehicleIdFromUrl) ?? null;
 
   useEffect(() => {
     const storedCompletedTrails = localStorage.getItem("xtrail-completed-trails");
@@ -34,10 +44,43 @@ export function CompletedTrails() {
     }
   }, []);
 
+  useEffect(() => {
+    const storedSavedRides = localStorage.getItem("xtrail-saved-rides");
+
+    if (!storedSavedRides) {
+      setSavedRides([]);
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(storedSavedRides) as SavedRide[];
+      setSavedRides(parsed);
+    } catch (error) {
+      console.error("Failed to load saved rides:", error);
+      setSavedRides([]);
+    }
+  }, []);
+
+  const filteredCompletedTrails = useMemo(() => {
+    if (!vehicleIdFromUrl) {
+      return completedTrails;
+    }
+
+    const rideIdsForVehicle = new Set(
+      savedRides
+        .filter((ride) => ride.vehicleId === vehicleIdFromUrl)
+        .map((ride) => ride.id)
+    );
+
+    return completedTrails.filter((completedTrail) =>
+      rideIdsForVehicle.has(completedTrail.rideId)
+    );
+  }, [completedTrails, savedRides, vehicleIdFromUrl]);
+
   const groupedCompletedTrails = useMemo<CompletedTrailGroup[]>(() => {
     const groupedMap = new Map<string, CompletedTrail[]>();
 
-    for (const completedTrail of completedTrails) {
+    for (const completedTrail of filteredCompletedTrails) {
       const existing = groupedMap.get(completedTrail.trailId) ?? [];
       existing.push(completedTrail);
       groupedMap.set(completedTrail.trailId, existing);
@@ -67,13 +110,13 @@ export function CompletedTrails() {
         (a, b) =>
           new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()
       );
-  }, [completedTrails]);
+  }, [filteredCompletedTrails]);
 
   return (
     <div className="min-h-full bg-neutral-950">
       <div className="border-b border-neutral-800 bg-gradient-to-b from-neutral-900 to-neutral-950 px-4 py-4">
         <div className="flex items-center gap-3">
-          <Link to="/profile">
+          <Link to={vehicleIdFromUrl ? `/garage/${vehicleIdFromUrl}` : "/profile"}>
             <Button
               variant="ghost"
               size="icon"
@@ -84,9 +127,14 @@ export function CompletedTrails() {
           </Link>
 
           <div>
-            <h1 className="text-xl font-semibold text-white">Completed Trails</h1>
+            <h1 className="text-xl font-semibold text-white">
+              {vehicleIdFromUrl ? "Vehicle Completed Trails" : "Completed Trails"}
+            </h1>
+
             <p className="text-sm text-neutral-400">
-              Trails you’ve finished and ridden successfully.
+              {vehicleIdFromUrl && selectedVehicle
+                ? `Trails completed with ${selectedVehicle.name}.`
+                : "Trails you’ve finished and ridden successfully."}
             </p>
           </div>
         </div>
@@ -100,10 +148,14 @@ export function CompletedTrails() {
             </div>
 
             <h2 className="mt-4 text-base font-medium text-white">
-              No completed trails yet
+              {vehicleIdFromUrl
+                ? "No completed trails for this vehicle yet"
+                : "No completed trails yet"}
             </h2>
             <p className="mt-2 text-sm text-neutral-400">
-              Finish a trail ride to start building your completed list.
+              {vehicleIdFromUrl
+                ? "Save a ride linked to this vehicle and trail to build its completed trail history."
+                : "Finish a trail ride to start building your completed list."}
             </p>
 
             <Link to="/" className="mt-4 inline-block">

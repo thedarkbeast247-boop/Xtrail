@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router";
 import {
   Plus,
   Wrench,
@@ -56,6 +57,10 @@ const serviceTypes = [
 export function ServiceLog() {
   const { vehicles, activeVehicle, setActiveVehicleId } = useVehicles();
   const { addService, getServicesForVehicle } = useServices();
+  const [searchParams] = useSearchParams();
+  const vehicleIdFromUrl = searchParams.get("vehicleId");
+  const [hasAppliedUrlVehicleFilter, setHasAppliedUrlVehicleFilter] =
+    useState(false);
 
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -67,7 +72,19 @@ export function ServiceLog() {
   });
 
   useEffect(() => {
-    if (activeVehicle?.id) {
+    if (!hasAppliedUrlVehicleFilter && vehicleIdFromUrl) {
+      const urlVehicleExists = vehicles.some(
+        (vehicle) => vehicle.id === vehicleIdFromUrl
+      );
+
+      if (urlVehicleExists) {
+        setSelectedVehicleId(vehicleIdFromUrl);
+        setHasAppliedUrlVehicleFilter(true);
+        return;
+      }
+    }
+
+    if (!selectedVehicleId && activeVehicle?.id) {
       setSelectedVehicleId(activeVehicle.id);
       return;
     }
@@ -75,7 +92,13 @@ export function ServiceLog() {
     if (!selectedVehicleId && vehicles.length > 0) {
       setSelectedVehicleId(vehicles[0].id);
     }
-  }, [activeVehicle, vehicles, selectedVehicleId]);
+  }, [
+    activeVehicle,
+    vehicles,
+    selectedVehicleId,
+    vehicleIdFromUrl,
+    hasAppliedUrlVehicleFilter,
+  ]);
 
   const selectedVehicle =
     vehicles.find((vehicle) => vehicle.id === selectedVehicleId) ?? null;
