@@ -605,7 +605,7 @@ export function TrailDetail() {
                 </button>
               </div>
 
-              <div className="mt-2 flex-1 space-y-3 overflow-y-auto pr-1 pb-1">
+              <div className="app-scrollbar mt-2 flex-1 space-y-3 overflow-y-auto pr-2 pb-1">
                 {sendTab === "friends" &&
                   mockFriends.map((friend) => (
                     <button

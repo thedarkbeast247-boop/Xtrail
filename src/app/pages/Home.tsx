@@ -973,7 +973,7 @@ export function Home() {
         {/* Trail Info Side Panel - Slides in from left */}
         {selectedTrail && (
           <div 
-            className="absolute left-0 top-0 bottom-0 w-[280px] bg-white shadow-2xl z-50 pointer-events-auto overflow-y-auto"
+            className="light-scrollbar absolute left-0 top-0 bottom-0 w-[280px] bg-white shadow-2xl z-50 pointer-events-auto overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="relative">
@@ -1110,7 +1110,7 @@ export function Home() {
       </div>
 
       {/* Filters Section */}
-      <div className="flex-1 bg-neutral-950 overflow-y-auto">
+      <div className="app-scrollbar flex-1 bg-neutral-950 overflow-y-auto">
         <div className="p-4 pb-44">
           <div className="flex items-center gap-2 mb-4">
             <Filter className="w-5 h-5 text-emerald-500" />

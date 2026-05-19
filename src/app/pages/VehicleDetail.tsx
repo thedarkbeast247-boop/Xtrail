@@ -436,6 +436,21 @@ export function VehicleDetail() {
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
+  useEffect(() => {
+    const originalBodyOverflow = document.body.style.overflow;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+
+    if (isEditModalOpen) {
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+    }
+
+    return () => {
+      document.body.style.overflow = originalBodyOverflow;
+      document.documentElement.style.overflow = originalHtmlOverflow;
+    };
+  }, [isEditModalOpen]);
+
   const [achievementFilter, setAchievementFilter] =
     useState<AchievementFilter>("all");
 
@@ -463,6 +478,19 @@ export function VehicleDetail() {
 
   const toggleSetupSection = (sectionId: string) => {
     setOpenSetupSections((prev) => ({
+      ...prev,
+      [sectionId]: !(prev[sectionId] ?? false),
+    }));
+  };
+
+  const [openEditSetupSections, setOpenEditSetupSections] = useState<
+    Record<string, boolean>
+  >({
+    riding: true,
+  });
+
+  const toggleEditSetupSection = (sectionId: string) => {
+    setOpenEditSetupSections((prev) => ({
       ...prev,
       [sectionId]: !(prev[sectionId] ?? false),
     }));
@@ -1373,7 +1401,11 @@ export function VehicleDetail() {
   }
 
   return (
-    <div className="min-h-full bg-neutral-950 text-white">
+    <div
+      className={`min-h-full bg-neutral-950 text-white ${
+        isEditModalOpen ? "max-h-screen overflow-hidden" : ""
+      }`}
+    >
       {recentAchievement && (
       <div className="fixed left-1/2 top-[13rem] z-[60] w-[calc(100%-2rem)] max-w-[400px] -translate-x-1/2 rounded-2xl border border-orange-500/30 bg-neutral-950 p-4 shadow-2xl">
         <div className="flex items-start gap-3">
@@ -2197,7 +2229,10 @@ export function VehicleDetail() {
                     onToggle={() => toggleSetupSection("protection")}
                   >
                     <div className="space-y-3">
-                      <SetupTagList label="Parts" values={setupProfile.protectionParts} />
+                      <SetupTagList
+                        label="Protection parts"
+                        values={setupProfile.protectionParts}
+                      />
 
                       {setupProfile.protectionNotes && (
                         <p className="rounded-xl bg-neutral-900 px-4 py-3 text-sm leading-6 text-neutral-300">
@@ -2437,7 +2472,7 @@ export function VehicleDetail() {
           onClick={() => setIsEditModalOpen(false)}
         >
           <div
-            className="max-h-[85vh] w-full max-w-[390px] overflow-y-auto rounded-3xl border border-neutral-800 bg-neutral-950 p-5 shadow-2xl"
+            className="flex max-h-[82vh] w-full max-w-[390px] flex-col overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-950 p-5 shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-4">
@@ -2460,7 +2495,7 @@ export function VehicleDetail() {
               </button>
             </div>
 
-            <div className="mt-5 space-y-4">
+            <div className="modal-scrollbar mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto pr-2 pb-4">
               <div>
                 <label className="text-sm font-medium text-neutral-300">
                   Vehicle name
@@ -2673,481 +2708,481 @@ export function VehicleDetail() {
               </div>
 
               <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-orange-400">
-                    Setup Vehicle Profile
-                  </p>
-                  <h3 className="mt-1 text-base font-semibold text-orange-400">
-                    Riding Setup
-                  </h3>
-                  <p className="mt-1 text-sm text-neutral-400">
-                    Add the current setup focus for this {setupConfig.label}.
-                  </p>
-                </div>
-
-                {/*Riding Setup*/}
-                <div className="mt-4 space-y-4">
+                <button
+                  type="button"
+                  onClick={() => toggleEditSetupSection("riding")}
+                  className="flex w-full items-start justify-between gap-3 text-left"
+                >
                   <div>
-                    <label className="text-sm font-medium text-neutral-300">
-                      Primary use
-                    </label>
-                    <input
-                      type="text"
-                      value={editVehicle.setupProfile.primaryUse ?? ""}
-                      onChange={(event) =>
-                        updateSetupProfileField("primaryUse", event.target.value)
-                      }
-                      placeholder="Example: Weekend trails, racing, touring"
-                      className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
-                    />
+                    <h3 className="mt-1 text-base font-semibold text-orange-400">
+                      Riding Setup
+                    </h3>
+                    <p className="mt-1 text-sm text-neutral-400">
+                      Add the current setup focus for this {setupConfig.label}.
+                    </p>
                   </div>
 
-                  <div>
-                    <label className="text-sm font-medium text-neutral-300">
-                      Terrain focus
-                    </label>
-                    <input
-                      type="text"
-                      value={editVehicle.setupProfile.terrainFocus ?? ""}
-                      onChange={(event) =>
-                        updateSetupProfileField("terrainFocus", event.target.value)
-                      }
-                      placeholder="Example: Rocks, sand, forest, mud"
-                      className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
-                    />
+                  <div className="mt-1 rounded-full border border-neutral-700 bg-neutral-950 p-1 text-neutral-300">
+                    {openEditSetupSections.riding ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
                   </div>
+                </button>
 
-                  <div>
-                    <label className="text-sm font-medium text-neutral-300">
-                      Riding setup
-                    </label>
-                    <select
-                      value={editVehicle.setupProfile.ridingSetup ?? ""}
-                      onChange={(event) =>
-                        updateSetupProfileField("ridingSetup", event.target.value)
-                      }
-                      className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
-                    >
-                      <option value="">Select setup</option>
-                      {setupConfig.ridingSetupOptions.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium text-neutral-300">
-                      Riding setup notes
-                    </label>
-                    <textarea
-                      value={editVehicle.setupProfile.ridingSetupNotes ?? ""}
-                      onChange={(event) =>
-                        updateSetupProfileField("ridingSetupNotes", event.target.value)
-                      }
-                      rows={3}
-                      placeholder="Example: Built for slow technical riding and rocky climbs."
-                      className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium text-neutral-300">
-                      General setup notes
-                    </label>
-                    <textarea
-                      value={editVehicle.setupProfile.setupNotes ?? ""}
-                      onChange={(event) =>
-                        updateSetupProfileField("setupNotes", event.target.value)
-                      }
-                      rows={3}
-                      placeholder="Add anything important about the current setup."
-                      className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/*Tyres / Wheels*/}
-              <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
-                <div>
-                  <h3 className="mt-1 text-base font-semibold text-orange-400">
-                    Tyres / Wheels
-                  </h3>
-                  <p className="mt-1 text-sm text-neutral-400">
-                    Add tyre, wheel, pressure, and traction details for this {setupConfig.label}.
-                  </p>
-                </div>
-
-                <div className="mt-4 space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
+                {openEditSetupSections.riding && (
+                  <div className="mt-4 space-y-4">
                     <div>
                       <label className="text-sm font-medium text-neutral-300">
-                        Front tyre type
-                      </label>
-                      <select
-                        value={editVehicle.setupProfile.frontTyreType ?? ""}
-                        onChange={(event) =>
-                          updateSetupProfileField("frontTyreType", event.target.value)
-                        }
-                        className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
-                      >
-                        <option value="">Select type</option>
-                        {setupConfig.tyreTypeOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium text-neutral-300">
-                        Rear tyre type
-                      </label>
-                      <select
-                        value={editVehicle.setupProfile.rearTyreType ?? ""}
-                        onChange={(event) =>
-                          updateSetupProfileField("rearTyreType", event.target.value)
-                        }
-                        className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
-                      >
-                        <option value="">Select type</option>
-                        {setupConfig.tyreTypeOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-sm font-medium text-neutral-300">
-                        Front tyre name
+                        Primary use
                       </label>
                       <input
                         type="text"
-                        value={editVehicle.setupProfile.frontTyreName ?? ""}
+                        value={editVehicle.setupProfile.primaryUse ?? ""}
                         onChange={(event) =>
-                          updateSetupProfileField("frontTyreName", event.target.value)
+                          updateSetupProfileField("primaryUse", event.target.value)
                         }
-                        placeholder="Example: Michelin Enduro Medium"
+                        placeholder="Example: Weekend trails, racing, touring"
                         className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
                       />
                     </div>
 
                     <div>
                       <label className="text-sm font-medium text-neutral-300">
-                        Rear tyre name
+                        Terrain focus
                       </label>
                       <input
                         type="text"
-                        value={editVehicle.setupProfile.rearTyreName ?? ""}
+                        value={editVehicle.setupProfile.terrainFocus ?? ""}
                         onChange={(event) =>
-                          updateSetupProfileField("rearTyreName", event.target.value)
+                          updateSetupProfileField("terrainFocus", event.target.value)
                         }
-                        placeholder="Example: Mitas Terra Force"
+                        placeholder="Example: Rocks, sand, forest, mud"
                         className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
                       />
                     </div>
-                  </div>
 
-                  <div>
-                    <label className="text-sm font-medium text-neutral-300">
-                      Tyre size
-                    </label>
-                    <input
-                      type="text"
-                      value={editVehicle.setupProfile.tyreSize ?? ""}
-                      onChange={(event) =>
-                        updateSetupProfileField("tyreSize", event.target.value)
-                      }
-                      placeholder="Example: 90/90-21, 140/80-18, 33 inch, 32x10R15"
-                      className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium text-neutral-300">
-                      Wheel setup
-                    </label>
-                    <input
-                      type="text"
-                      value={editVehicle.setupProfile.wheelSetup ?? ""}
-                      onChange={(event) =>
-                        updateSetupProfileField("wheelSetup", event.target.value)
-                      }
-                      placeholder="Example: Beadlocks, stock wheels, heavy duty rims"
-                      className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium text-neutral-300">
-                      Tyre pressure
-                    </label>
-                    <input
-                      type="text"
-                      value={editVehicle.setupProfile.tyrePressure ?? ""}
-                      onChange={(event) =>
-                        updateSetupProfileField("tyrePressure", event.target.value)
-                      }
-                      placeholder="Example: Front 0.9 bar / Rear 0.7 bar"
-                      className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
-                    />
-                  </div>
-
-                  {setupConfig.setupSections.includes("tube-system") && (
                     <div>
                       <label className="text-sm font-medium text-neutral-300">
-                        Tube / mousse / tubliss
+                        Riding setup
                       </label>
                       <select
-                        value={editVehicle.setupProfile.tubeMousseTubliss ?? ""}
+                        value={editVehicle.setupProfile.ridingSetup ?? ""}
                         onChange={(event) =>
-                          updateSetupProfileField("tubeMousseTubliss", event.target.value)
+                          updateSetupProfileField("ridingSetup", event.target.value)
                         }
                         className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
                       >
                         <option value="">Select setup</option>
-                        {tubeMousseTublissOptions.map((option) => (
+                        {setupConfig.ridingSetupOptions.map((option) => (
                           <option key={option} value={option}>
                             {option}
                           </option>
                         ))}
                       </select>
                     </div>
-                  )}
-                </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-neutral-300">
+                        Riding setup notes
+                      </label>
+                      <textarea
+                        value={editVehicle.setupProfile.ridingSetupNotes ?? ""}
+                        onChange={(event) =>
+                          updateSetupProfileField("ridingSetupNotes", event.target.value)
+                        }
+                        rows={3}
+                        placeholder="Example: Built for slow technical riding and rocky climbs."
+                        className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-neutral-300">
+                        General setup notes
+                      </label>
+                      <textarea
+                        value={editVehicle.setupProfile.setupNotes ?? ""}
+                        onChange={(event) =>
+                          updateSetupProfileField("setupNotes", event.target.value)
+                        }
+                        rows={3}
+                        placeholder="Add anything important about the current setup."
+                        className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/*Tyres / Wheels*/}
+              <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
+                <button
+                  type="button"
+                  onClick={() => toggleEditSetupSection("tyres")}
+                  className="flex w-full items-start justify-between gap-3 text-left"
+                >
+                  <div>
+                    <h3 className="mt-1 text-base font-semibold text-orange-400">
+                      Tyres / Wheels
+                    </h3>
+                    <p className="mt-1 text-sm text-neutral-400">
+                      Add tyre, wheel, pressure, and traction details for this {setupConfig.label}.
+                    </p>
+                  </div>
+
+                  <div className="mt-1 rounded-full border border-neutral-700 bg-neutral-950 p-1 text-neutral-300">
+                    {openEditSetupSections.tyres ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
+                  </div>
+                </button>
+
+                {openEditSetupSections.tyres && (
+                  <div className="mt-4 space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-sm font-medium text-neutral-300">
+                          Front tyre type
+                        </label>
+                        <select
+                          value={editVehicle.setupProfile.frontTyreType ?? ""}
+                          onChange={(event) =>
+                            updateSetupProfileField("frontTyreType", event.target.value)
+                          }
+                          className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
+                        >
+                          <option value="">Select type</option>
+                          {setupConfig.tyreTypeOptions.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-medium text-neutral-300">
+                          Rear tyre type
+                        </label>
+                        <select
+                          value={editVehicle.setupProfile.rearTyreType ?? ""}
+                          onChange={(event) =>
+                            updateSetupProfileField("rearTyreType", event.target.value)
+                          }
+                          className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
+                        >
+                          <option value="">Select type</option>
+                          {setupConfig.tyreTypeOptions.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-sm font-medium text-neutral-300">
+                          Front tyre name
+                        </label>
+                        <input
+                          type="text"
+                          value={editVehicle.setupProfile.frontTyreName ?? ""}
+                          onChange={(event) =>
+                            updateSetupProfileField("frontTyreName", event.target.value)
+                          }
+                          placeholder="Example: Michelin Enduro Medium"
+                          className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-medium text-neutral-300">
+                          Rear tyre name
+                        </label>
+                        <input
+                          type="text"
+                          value={editVehicle.setupProfile.rearTyreName ?? ""}
+                          onChange={(event) =>
+                            updateSetupProfileField("rearTyreName", event.target.value)
+                          }
+                          placeholder="Example: Mitas Terra Force"
+                          className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-neutral-300">
+                        Tyre size
+                      </label>
+                      <input
+                        type="text"
+                        value={editVehicle.setupProfile.tyreSize ?? ""}
+                        onChange={(event) =>
+                          updateSetupProfileField("tyreSize", event.target.value)
+                        }
+                        placeholder="Example: 90/90-21, 140/80-18, 33 inch, 32x10R15"
+                        className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-neutral-300">
+                        Wheel setup
+                      </label>
+                      <input
+                        type="text"
+                        value={editVehicle.setupProfile.wheelSetup ?? ""}
+                        onChange={(event) =>
+                          updateSetupProfileField("wheelSetup", event.target.value)
+                        }
+                        placeholder="Example: Beadlocks, stock wheels, heavy duty rims"
+                        className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-neutral-300">
+                        Tyre pressure
+                      </label>
+                      <input
+                        type="text"
+                        value={editVehicle.setupProfile.tyrePressure ?? ""}
+                        onChange={(event) =>
+                          updateSetupProfileField("tyrePressure", event.target.value)
+                        }
+                        placeholder="Example: Front 0.9 bar / Rear 0.7 bar"
+                        className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
+                      />
+                    </div>
+
+                    {setupConfig.setupSections.includes("tube-system") && (
+                      <div>
+                        <label className="text-sm font-medium text-neutral-300">
+                          Tube / mousse / tubliss
+                        </label>
+                        <select
+                          value={editVehicle.setupProfile.tubeMousseTubliss ?? ""}
+                          onChange={(event) =>
+                            updateSetupProfileField("tubeMousseTubliss", event.target.value)
+                          }
+                          className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
+                        >
+                          <option value="">Select setup</option>
+                          {tubeMousseTublissOptions.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/*Suspension*/}
               {setupConfig.setupSections.includes("suspension") && (
                 <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
-                  <div>
-                    <h3 className="mt-1 text-base font-semibold text-orange-400">
-                      Suspension
-                    </h3>
-                    <p className="mt-1 text-sm text-neutral-400">
-                      Add the current suspension setup for this {setupConfig.label}.
-                    </p>
-                  </div>
-
-                  <div className="mt-4 space-y-4">
+                  <button
+                    type="button"
+                    onClick={() => toggleEditSetupSection("suspension")}
+                    className="flex w-full items-start justify-between gap-3 text-left"
+                  >
                     <div>
-                      <label className="text-sm font-medium text-neutral-300">
-                        Suspension setup
-                      </label>
-                      <select
-                        value={editVehicle.setupProfile.suspensionSetup ?? ""}
-                        onChange={(event) =>
-                          updateSetupProfileField("suspensionSetup", event.target.value)
-                        }
-                        className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
-                      >
-                        <option value="">Select suspension setup</option>
-                        {setupConfig.suspensionOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium text-neutral-300">
-                        Rider / load weight
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={editVehicle.setupProfile.riderWeightKg ?? ""}
-                        onChange={(event) =>
-                          updateSetupProfileField(
-                            "riderWeightKg",
-                            event.target.value ? Number(event.target.value) : undefined
-                          )
-                        }
-                        placeholder="Example: 78"
-                        className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
-                      />
-                      <p className="mt-1 text-xs text-neutral-500">
-                        Use rider weight, load weight, or touring/cargo weight where relevant.
+                      <h3 className="mt-1 text-base font-semibold text-orange-400">
+                        Suspension
+                      </h3>
+                      <p className="mt-1 text-sm text-neutral-400">
+                        Add the current suspension setup for this {setupConfig.label}.
                       </p>
                     </div>
 
-                    <div>
-                      <label className="text-sm font-medium text-neutral-300">
-                        Suspension notes
-                      </label>
-                      <textarea
-                        value={editVehicle.setupProfile.suspensionNotes ?? ""}
-                        onChange={(event) =>
-                          updateSetupProfileField("suspensionNotes", event.target.value)
-                        }
-                        rows={3}
-                        placeholder="Example: Soft rocks setup, loaded luggage setup, or 2 clicks slower rebound."
-                        className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
-                      />
+                    <div className="mt-1 rounded-full border border-neutral-700 bg-neutral-950 p-1 text-neutral-300">
+                      {openEditSetupSections.suspension ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
                     </div>
-                  </div>
-                </div>
-              )}
+                  </button>
 
-              {/*Protection*/}
-              {setupConfig.setupSections.includes("protection") && (
-                <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
-                  <div>
-                    <h3 className="mt-1 text-base font-semibold text-orange-400">
-                      Protection
-                    </h3>
-                    <p className="mt-1 text-sm text-neutral-400">
-                      Select protection parts fitted to this {setupConfig.label}.
-                    </p>
-                  </div>
+                  {openEditSetupSections.suspension && (
+                    <div className="mt-4 space-y-4">
+                      <div>
+                        <label className="text-sm font-medium text-neutral-300">
+                          Suspension setup
+                        </label>
+                        <select
+                          value={editVehicle.setupProfile.suspensionSetup ?? ""}
+                          onChange={(event) =>
+                            updateSetupProfileField("suspensionSetup", event.target.value)
+                          }
+                          className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
+                        >
+                          <option value="">Select suspension setup</option>
+                          {setupConfig.suspensionOptions.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-                  <div className="mt-4 space-y-4">
-                    <div className="grid grid-cols-2 gap-2">
-                      {setupConfig.protectionOptions.map((option) => {
-                        const selectedParts =
-                          editVehicle.setupProfile.protectionParts ?? [];
+                      <div>
+                        <label className="text-sm font-medium text-neutral-300">
+                          Rider / load weight
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={editVehicle.setupProfile.riderWeightKg ?? ""}
+                          onChange={(event) =>
+                            updateSetupProfileField(
+                              "riderWeightKg",
+                              event.target.value ? Number(event.target.value) : undefined
+                            )
+                          }
+                          placeholder="Example: 78"
+                          className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
+                        />
+                        <p className="mt-1 text-xs text-neutral-500">
+                          Use rider weight, load weight, or touring/cargo weight where relevant.
+                        </p>
+                      </div>
 
-                        const isSelected = selectedParts.includes(option);
-
-                        return (
-                          <button
-                            key={option}
-                            type="button"
-                            onClick={() => {
-                              const nextParts = isSelected
-                                ? selectedParts.filter((part) => part !== option)
-                                : [...selectedParts, option];
-
-                              updateSetupProfileField("protectionParts", nextParts);
-                            }}
-                            className={`rounded-xl border px-3 py-2 text-left text-xs font-medium transition ${
-                              isSelected
-                                ? "border-orange-500/40 bg-orange-500/15 text-orange-400"
-                                : "border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-neutral-700"
-                            }`}
-                          >
-                            {option}
-                          </button>
-                        );
-                      })}
+                      <div>
+                        <label className="text-sm font-medium text-neutral-300">
+                          Suspension notes
+                        </label>
+                        <textarea
+                          value={editVehicle.setupProfile.suspensionNotes ?? ""}
+                          onChange={(event) =>
+                            updateSetupProfileField("suspensionNotes", event.target.value)
+                          }
+                          rows={3}
+                          placeholder="Example: Soft rocks setup, loaded luggage setup, or 2 clicks slower rebound."
+                          className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
+                        />
+                      </div>
                     </div>
-
-                    <div>
-                      <label className="text-sm font-medium text-neutral-300">
-                        Protection notes
-                      </label>
-                      <textarea
-                        value={editVehicle.setupProfile.protectionNotes ?? ""}
-                        onChange={(event) =>
-                          updateSetupProfileField("protectionNotes", event.target.value)
-                        }
-                        rows={3}
-                        placeholder="Example: AXP skid plate, radiator braces, or full underbody protection."
-                        className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
-                      />
-                    </div>
-                  </div>
+                  )}
                 </div>
               )}
 
               {/*Fuel / Range*/}
               {setupConfig.setupSections.includes("fuel") && (
                 <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
-                  <div>
-                    <h3 className="mt-1 text-base font-semibold text-orange-400">
-                      Fuel / Range
-                    </h3>
-                    <p className="mt-1 text-sm text-neutral-400">
-                      Add fuel capacity and expected range for this {setupConfig.label}.
-                    </p>
-                  </div>
-
-                  <div className="mt-4 space-y-4">
+                  <button
+                    type="button"
+                    onClick={() => toggleEditSetupSection("fuel")}
+                    className="flex w-full items-start justify-between gap-3 text-left"
+                  >
                     <div>
-                      <label className="text-sm font-medium text-neutral-300">
-                        Fuel setup
-                      </label>
-                      <select
-                        value={editVehicle.setupProfile.fuelSetup ?? ""}
-                        onChange={(event) =>
-                          updateSetupProfileField("fuelSetup", event.target.value)
-                        }
-                        className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
-                      >
-                        <option value="">Select fuel setup</option>
-                        {setupConfig.fuelOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
+                      <h3 className="mt-1 text-base font-semibold text-orange-400">
+                        Fuel / Range
+                      </h3>
+
+                      <p className="mt-1 text-sm text-neutral-400">
+                        Add fuel capacity and expected range for this {setupConfig.label}.
+                      </p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="mt-1 shrink-0 rounded-full border border-neutral-700 bg-neutral-950 p-1 text-neutral-300">
+                      {openEditSetupSections.fuel ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                    </div>
+                  </button>
+
+                  {openEditSetupSections.fuel && (
+                    <div className="mt-4 space-y-4">
                       <div>
                         <label className="text-sm font-medium text-neutral-300">
-                          Tank size
+                          Fuel setup
                         </label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.1"
-                          value={editVehicle.setupProfile.fuelTankSizeLitres ?? ""}
+                        <select
+                          value={editVehicle.setupProfile.fuelSetup ?? ""}
                           onChange={(event) =>
-                            updateSetupProfileField(
-                              "fuelTankSizeLitres",
-                              event.target.value ? Number(event.target.value) : undefined
-                            )
+                            updateSetupProfileField("fuelSetup", event.target.value)
                           }
-                          placeholder="Litres"
-                          className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
-                        />
+                          className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
+                        >
+                          <option value="">Select fuel setup</option>
+                          {setupConfig.fuelOptions.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-sm font-medium text-neutral-300">
+                            Tank size
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.1"
+                            value={editVehicle.setupProfile.fuelTankSizeLitres ?? ""}
+                            onChange={(event) =>
+                              updateSetupProfileField(
+                                "fuelTankSizeLitres",
+                                event.target.value ? Number(event.target.value) : undefined
+                              )
+                            }
+                            placeholder="Litres"
+                            className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-sm font-medium text-neutral-300">
+                            Range
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={editVehicle.setupProfile.fuelRangeKm ?? ""}
+                            onChange={(event) =>
+                              updateSetupProfileField(
+                                "fuelRangeKm",
+                                event.target.value ? Number(event.target.value) : undefined
+                              )
+                            }
+                            placeholder="km"
+                            className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
+                          />
+                        </div>
                       </div>
 
                       <div>
                         <label className="text-sm font-medium text-neutral-300">
-                          Range
+                          Fuel notes
                         </label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={editVehicle.setupProfile.fuelRangeKm ?? ""}
+                        <textarea
+                          value={editVehicle.setupProfile.fuelNotes ?? ""}
                           onChange={(event) =>
-                            updateSetupProfileField(
-                              "fuelRangeKm",
-                              event.target.value ? Number(event.target.value) : undefined
-                            )
+                            updateSetupProfileField("fuelNotes", event.target.value)
                           }
-                          placeholder="km"
+                          rows={3}
+                          placeholder="Example: Gets around 70 km in hard enduro, or carries two jerry cans for long trips."
                           className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
                         />
                       </div>
                     </div>
-
-                    <div>
-                      <label className="text-sm font-medium text-neutral-300">
-                        Fuel notes
-                      </label>
-                      <textarea
-                        value={editVehicle.setupProfile.fuelNotes ?? ""}
-                        onChange={(event) =>
-                          updateSetupProfileField("fuelNotes", event.target.value)
-                        }
-                        rows={3}
-                        placeholder="Example: Gets around 70 km in hard enduro, or carries two jerry cans for long trips."
-                        className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
-                      />
-                    </div>
-                  </div>
+                  )}
                 </div>
               )}
 
@@ -3155,328 +3190,441 @@ export function VehicleDetail() {
               {(setupConfig.setupSections.includes("gearing") ||
                 setupConfig.setupSections.includes("drivetrain")) && (
                 <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
-                  <div>
-
-                    <h3 className="mt-1 text-base font-semibold text-orange-400">
-                      {setupConfig.setupSections.includes("gearing")
-                        ? "Gearing"
-                        : "Drivetrain"}
-                    </h3>
-
-                    <p className="mt-1 text-sm text-neutral-400">
-                      {setupConfig.setupSections.includes("gearing")
-                        ? `Add sprocket and gearing details for this ${setupConfig.label}.`
-                        : `Add drivetrain, locker, and drive mode details for this ${setupConfig.label}.`}
-                    </p>
-                  </div>
-
-                  <div className="mt-4 space-y-4">
-                    {setupConfig.setupSections.includes("gearing") && (
-                      <>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="text-sm font-medium text-neutral-300">
-                              Front sprocket
-                            </label>
-
-                            <input
-                              type="number"
-                              min="0"
-                              value={editVehicle.setupProfile.frontSprocket ?? ""}
-                              onChange={(event) =>
-                                updateSetupProfileField(
-                                  "frontSprocket",
-                                  event.target.value ? Number(event.target.value) : undefined
-                                )
-                              }
-                              placeholder="Example: 13"
-                              className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="text-sm font-medium text-neutral-300">
-                              Rear sprocket
-                            </label>
-
-                            <input
-                              type="number"
-                              min="0"
-                              value={editVehicle.setupProfile.rearSprocket ?? ""}
-                              onChange={(event) =>
-                                updateSetupProfileField(
-                                  "rearSprocket",
-                                  event.target.value ? Number(event.target.value) : undefined
-                                )
-                              }
-                              placeholder="Example: 50"
-                              className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
-                            />
-                          </div>
-                        </div>
-
-                        {(editVehicle.setupProfile.frontSprocket ||
-                          editVehicle.setupProfile.rearSprocket) && (
-                          <div className="rounded-xl border border-neutral-800 bg-neutral-950 px-4 py-3">
-                            <p className="text-xs uppercase tracking-wide text-neutral-500">
-                              Current gearing
-                            </p>
-
-                            <p className="mt-2 text-lg font-semibold text-white">
-                              {editVehicle.setupProfile.frontSprocket ?? "-"} /{" "}
-                              {editVehicle.setupProfile.rearSprocket ?? "-"}
-                            </p>
-                          </div>
-                        )}
-                      </>
-                    )}
-
-                    {setupConfig.setupSections.includes("drivetrain") && (
-                      <>
-                        <div>
-                          <label className="text-sm font-medium text-neutral-300">
-                            Drivetrain setup
-                          </label>
-
-                          <select
-                            value={editVehicle.setupProfile.drivetrainSetup ?? ""}
-                            onChange={(event) =>
-                              updateSetupProfileField("drivetrainSetup", event.target.value)
-                            }
-                            className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
-                          >
-                            <option value="">Select drivetrain setup</option>
-                            {setupConfig.drivetrainOptions.map((option) => (
-                              <option key={option} value={option}>
-                                {option}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="text-sm font-medium text-neutral-300">
-                            Lockers / drive mode
-                          </label>
-
-                          <select
-                            value={editVehicle.setupProfile.lockers ?? ""}
-                            onChange={(event) =>
-                              updateSetupProfileField("lockers", event.target.value)
-                            }
-                            className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
-                          >
-                            <option value="">Select locker or drive mode</option>
-                            {setupConfig.lockerOptions.map((option) => (
-                              <option key={option} value={option}>
-                                {option}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </>
-                    )}
-
+                  <button
+                    type="button"
+                    onClick={() => toggleEditSetupSection("gearing")}
+                    className="flex w-full items-start justify-between gap-3 text-left"
+                  >
                     <div>
-                      <label className="text-sm font-medium text-neutral-300">
-                        Notes
-                      </label>
+                      <h3 className="mt-1 text-base font-semibold text-orange-400">
+                        {setupConfig.setupSections.includes("gearing")
+                          ? "Gearing"
+                          : "Drivetrain"}
+                      </h3>
 
-                      <textarea
-                        value={editVehicle.setupProfile.gearingNotes ?? ""}
-                        onChange={(event) =>
-                          updateSetupProfileField("gearingNotes", event.target.value)
-                        }
-                        rows={3}
-                        placeholder={
-                          setupConfig.setupSections.includes("gearing")
-                            ? "Example: 13/50 works well for technical climbs but revs high on open roads."
-                            : "Example: Low range with rear locker for rocky trails."
-                        }
-                        className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
-                      />
+                      <p className="mt-1 text-sm text-neutral-400">
+                        {setupConfig.setupSections.includes("gearing")
+                          ? `Add sprocket and gearing details for this ${setupConfig.label}.`
+                          : `Add drivetrain, locker, and drive mode details for this ${setupConfig.label}.`}
+                      </p>
                     </div>
-                  </div>
+
+                    <div className="mt-1 rounded-full border border-neutral-700 bg-neutral-950 p-1 text-neutral-300">
+                      {openEditSetupSections.gearing ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                    </div>
+                  </button>
+
+                  {openEditSetupSections.gearing && (
+                    <div className="mt-4 space-y-4">
+                      {setupConfig.setupSections.includes("gearing") && (
+                        <>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-sm font-medium text-neutral-300">
+                                Front sprocket
+                              </label>
+
+                              <input
+                                type="number"
+                                min="0"
+                                value={editVehicle.setupProfile.frontSprocket ?? ""}
+                                onChange={(event) =>
+                                  updateSetupProfileField(
+                                    "frontSprocket",
+                                    event.target.value ? Number(event.target.value) : undefined
+                                  )
+                                }
+                                placeholder="Example: 13"
+                                className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-sm font-medium text-neutral-300">
+                                Rear sprocket
+                              </label>
+
+                              <input
+                                type="number"
+                                min="0"
+                                value={editVehicle.setupProfile.rearSprocket ?? ""}
+                                onChange={(event) =>
+                                  updateSetupProfileField(
+                                    "rearSprocket",
+                                    event.target.value ? Number(event.target.value) : undefined
+                                  )
+                                }
+                                placeholder="Example: 50"
+                                className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
+                              />
+                            </div>
+                          </div>
+
+                          {(editVehicle.setupProfile.frontSprocket ||
+                            editVehicle.setupProfile.rearSprocket) && (
+                            <div className="rounded-xl border border-neutral-800 bg-neutral-950 px-4 py-3">
+                              <p className="text-xs uppercase tracking-wide text-neutral-500">
+                                Current gearing
+                              </p>
+
+                              <p className="mt-2 text-lg font-semibold text-white">
+                                {editVehicle.setupProfile.frontSprocket ?? "-"} /{" "}
+                                {editVehicle.setupProfile.rearSprocket ?? "-"}
+                              </p>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {setupConfig.setupSections.includes("drivetrain") && (
+                        <>
+                          <div>
+                            <label className="text-sm font-medium text-neutral-300">
+                              Drivetrain setup
+                            </label>
+
+                            <select
+                              value={editVehicle.setupProfile.drivetrainSetup ?? ""}
+                              onChange={(event) =>
+                                updateSetupProfileField("drivetrainSetup", event.target.value)
+                              }
+                              className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
+                            >
+                              <option value="">Select drivetrain setup</option>
+                              {setupConfig.drivetrainOptions.map((option) => (
+                                <option key={option} value={option}>
+                                  {option}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="text-sm font-medium text-neutral-300">
+                              Lockers / drive mode
+                            </label>
+
+                            <select
+                              value={editVehicle.setupProfile.lockers ?? ""}
+                              onChange={(event) =>
+                                updateSetupProfileField("lockers", event.target.value)
+                              }
+                              className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
+                            >
+                              <option value="">Select locker or drive mode</option>
+                              {setupConfig.lockerOptions.map((option) => (
+                                <option key={option} value={option}>
+                                  {option}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </>
+                      )}
+
+                      <div>
+                        <label className="text-sm font-medium text-neutral-300">
+                          Notes
+                        </label>
+
+                        <textarea
+                          value={editVehicle.setupProfile.gearingNotes ?? ""}
+                          onChange={(event) =>
+                            updateSetupProfileField("gearingNotes", event.target.value)
+                          }
+                          rows={3}
+                          placeholder={
+                            setupConfig.setupSections.includes("gearing")
+                              ? "Example: 13/50 works well for technical climbs but revs high on open roads."
+                              : "Example: Low range with rear locker for rocky trails."
+                          }
+                          className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
               {/*Navigation*/}
               {setupConfig.setupSections.includes("navigation") && (
                 <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
-                  <div>
-                    <h3 className="mt-1 text-base font-semibold text-orange-400">
-                      Navigation
-                    </h3>
-
-                    <p className="mt-1 text-sm text-neutral-400">
-                      Add navigation, mapping, and route-following setup for this{" "}
-                      {setupConfig.label}.
-                    </p>
-                  </div>
-
-                  <div className="mt-4 space-y-4">
+                  <button
+                    type="button"
+                    onClick={() => toggleEditSetupSection("navigation")}
+                    className="flex w-full items-start justify-between gap-3 text-left"
+                  >
                     <div>
-                      <label className="text-sm font-medium text-neutral-300">
-                        Navigation setup
-                      </label>
+                      <h3 className="mt-1 text-base font-semibold text-orange-400">
+                        Navigation
+                      </h3>
 
-                      <select
-                        value={editVehicle.setupProfile.navigationSetup ?? ""}
-                        onChange={(event) =>
-                          updateSetupProfileField("navigationSetup", event.target.value)
-                        }
-                        className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
-                      >
-                        <option value="">Select navigation setup</option>
-                        {setupConfig.navigationOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
+                      <p className="mt-1 text-sm text-neutral-400">
+                        Add navigation, mapping, and route-following setup for this{" "}
+                        {setupConfig.label}.
+                      </p>
                     </div>
 
-                    <div>
-                      <label className="text-sm font-medium text-neutral-300">
-                        Navigation notes
-                      </label>
-
-                      <textarea
-                        value={editVehicle.setupProfile.electronicsNotes ?? ""}
-                        onChange={(event) =>
-                          updateSetupProfileField("electronicsNotes", event.target.value)
-                        }
-                        rows={3}
-                        placeholder="Example: Phone mount with offline maps, Garmin GPS, or tablet running route tracking."
-                        className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
-                      />
+                    <div className="mt-1 shrink-0 rounded-full border border-neutral-700 bg-neutral-950 p-1 text-neutral-300">
+                      {openEditSetupSections.navigation ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
                     </div>
-                  </div>
+                  </button>
+
+                  {openEditSetupSections.navigation && (
+                    <div className="mt-4 space-y-4">
+                      <div>
+                        <label className="text-sm font-medium text-neutral-300">
+                          Navigation setup
+                        </label>
+
+                        <select
+                          value={editVehicle.setupProfile.navigationSetup ?? ""}
+                          onChange={(event) =>
+                            updateSetupProfileField("navigationSetup", event.target.value)
+                          }
+                          className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
+                        >
+                          <option value="">Select navigation setup</option>
+                          {setupConfig.navigationOptions.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-medium text-neutral-300">
+                          Navigation notes
+                        </label>
+
+                        <textarea
+                          value={editVehicle.setupProfile.electronicsNotes ?? ""}
+                          onChange={(event) =>
+                            updateSetupProfileField("electronicsNotes", event.target.value)
+                          }
+                          rows={3}
+                          placeholder="Example: Phone mount with offline maps, Garmin GPS, or tablet running route tracking."
+                          className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
               {/*Lighting*/}
               {setupConfig.setupSections.includes("lighting") && (
                 <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
-                  <div>
-                    <h3 className="mt-1 text-base font-semibold text-orange-400">
-                      Lighting
-                    </h3>
-
-                    <p className="mt-1 text-sm text-neutral-400">
-                      Add lighting, visibility, and night-riding setup for this{" "}
-                      {setupConfig.label}.
-                    </p>
-                  </div>
-
-                  <div className="mt-4 space-y-4">
+                  <button
+                    type="button"
+                    onClick={() => toggleEditSetupSection("lighting")}
+                    className="flex w-full items-start justify-between gap-3 text-left"
+                  >
                     <div>
-                      <label className="text-sm font-medium text-neutral-300">
-                        Lighting setup
-                      </label>
+                      <h3 className="mt-1 text-base font-semibold text-orange-400">
+                        Lighting
+                      </h3>
 
-                      <select
-                        value={editVehicle.setupProfile.lightingSetup ?? ""}
-                        onChange={(event) =>
-                          updateSetupProfileField("lightingSetup", event.target.value)
-                        }
-                        className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
-                      >
-                        <option value="">Select lighting setup</option>
-                        {setupConfig.lightingOptions.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
+                      <p className="mt-1 text-sm text-neutral-400">
+                        Add lighting, visibility, and night-riding setup for this{" "}
+                        {setupConfig.label}.
+                      </p>
                     </div>
 
-                    <div>
-                      <label className="text-sm font-medium text-neutral-300">
-                        Lighting notes
-                      </label>
-
-                      <textarea
-                        value={editVehicle.setupProfile.lightingNotes ?? ""}
-                        onChange={(event) =>
-                          updateSetupProfileField("lightingNotes", event.target.value)
-                        }
-                        rows={3}
-                        placeholder="Example: LED headlight, roof light bar, rear work light, or night trail setup."
-                        className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
-                      />
+                    <div className="mt-1 shrink-0 rounded-full border border-neutral-700 bg-neutral-950 p-1 text-neutral-300">
+                      {openEditSetupSections.lighting ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
                     </div>
-                  </div>
+                  </button>
+
+                  {openEditSetupSections.lighting && (
+                    <div className="mt-4 space-y-4">
+                      <div>
+                        <label className="text-sm font-medium text-neutral-300">
+                          Lighting setup
+                        </label>
+
+                        <select
+                          value={editVehicle.setupProfile.lightingSetup ?? ""}
+                          onChange={(event) =>
+                            updateSetupProfileField("lightingSetup", event.target.value)
+                          }
+                          className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
+                        >
+                          <option value="">Select lighting setup</option>
+                          {setupConfig.lightingOptions.map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-medium text-neutral-300">
+                          Lighting notes
+                        </label>
+
+                        <textarea
+                          value={editVehicle.setupProfile.lightingNotes ?? ""}
+                          onChange={(event) =>
+                            updateSetupProfileField("lightingNotes", event.target.value)
+                          }
+                          rows={3}
+                          placeholder="Example: LED headlight, roof light bar, rear work light, or night trail setup."
+                          className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
               {/*Tools and spares*/}
               {setupConfig.setupSections.includes("tools") && (
                 <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-orange-400">
-                      Setup Profile
-                    </p>
+                  <button
+                    type="button"
+                    onClick={() => toggleEditSetupSection("tools")}
+                    className="flex w-full items-start justify-between gap-3 text-left"
+                  >
+                    <div>
+                      <h3 className="mt-1 text-base font-semibold text-orange-400">
+                        Tools / Spares
+                      </h3>
 
-                    <h3 className="mt-1 text-base font-semibold text-white">
-                      Tools / Spares
+                      <p className="mt-1 text-sm text-neutral-400">
+                        Select tools and spares carried with this {setupConfig.label}.
+                      </p>
+                    </div>
+
+                    <div className="mt-1 shrink-0 rounded-full border border-neutral-700 bg-neutral-950 p-1 text-neutral-300">
+                      {openEditSetupSections.tools ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                    </div>
+                  </button>
+
+                  {openEditSetupSections.tools && (
+                    <div className="mt-4 space-y-4">
+                      <div className="grid grid-cols-2 gap-2">
+                        {setupConfig.toolsAndSparesOptions.map((option) => {
+                          const selectedTools =
+                            editVehicle.setupProfile.toolsAndSpares ?? [];
+
+                          const isSelected = selectedTools.includes(option);
+
+                          return (
+                            <button
+                              key={option}
+                              type="button"
+                              onClick={() => {
+                                const nextTools = isSelected
+                                  ? selectedTools.filter((tool) => tool !== option)
+                                  : [...selectedTools, option];
+
+                                updateSetupProfileField("toolsAndSpares", nextTools);
+                              }}
+                              className={`rounded-xl border px-3 py-2 text-left text-xs font-medium transition ${
+                                isSelected
+                                  ? "border-orange-500/40 bg-orange-500/15 text-orange-400"
+                                  : "border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-neutral-700"
+                              }`}
+                            >
+                              {option}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-medium text-neutral-300">
+                          Tools / spares notes
+                        </label>
+
+                        <textarea
+                          value={editVehicle.setupProfile.toolsAndSparesNotes ?? ""}
+                          onChange={(event) =>
+                            updateSetupProfileField(
+                              "toolsAndSparesNotes",
+                              event.target.value
+                            )
+                          }
+                          rows={3}
+                          placeholder="Example: Carrying tyre levers, plug kit, compressor, spare belt, or recovery tools."
+                          className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/*Custom Setup*/}
+              <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
+                <button
+                  type="button"
+                  onClick={() => toggleEditSetupSection("custom")}
+                  className="flex w-full items-start justify-between gap-3 text-left"
+                >
+                  <div>
+                    <h3 className="mt-1 text-base font-semibold text-orange-400">
+                      Custom Setup
                     </h3>
 
                     <p className="mt-1 text-sm text-neutral-400">
-                      Select tools and spares carried with this {setupConfig.label}.
+                      Add custom build notes, special setup changes, or anything that does
+                      not fit into the other setup sections.
                     </p>
                   </div>
 
+                  <div className="mt-1 shrink-0 rounded-full border border-neutral-700 bg-neutral-950 p-1 text-neutral-300">
+                    {openEditSetupSections.custom ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
+                  </div>
+                </button>
+
+                {openEditSetupSections.custom && (
                   <div className="mt-4 space-y-4">
-                    <div className="grid grid-cols-2 gap-2">
-                      {setupConfig.toolsAndSparesOptions.map((option) => {
-                        const selectedTools = editVehicle.setupProfile.toolsAndSpares ?? [];
-                        const isSelected = selectedTools.includes(option);
-
-                        return (
-                          <button
-                            key={option}
-                            type="button"
-                            onClick={() => {
-                              const nextTools = isSelected
-                                ? selectedTools.filter((tool) => tool !== option)
-                                : [...selectedTools, option];
-
-                              updateSetupProfileField("toolsAndSpares", nextTools);
-                            }}
-                            className={`rounded-xl border px-3 py-2 text-left text-xs font-medium transition ${
-                              isSelected
-                                ? "border-orange-500/40 bg-orange-500/15 text-orange-400"
-                                : "border-neutral-800 bg-neutral-950 text-neutral-300 hover:border-neutral-700"
-                            }`}
-                          >
-                            {option}
-                          </button>
-                        );
-                      })}
-                    </div>
-
                     <div>
                       <label className="text-sm font-medium text-neutral-300">
-                        Tools / spares notes
+                        Custom setup notes
                       </label>
 
                       <textarea
-                        value={editVehicle.setupProfile.toolsAndSparesNotes ?? ""}
+                        value={editVehicle.setupProfile.customSetup ?? ""}
                         onChange={(event) =>
-                          updateSetupProfileField("toolsAndSparesNotes", event.target.value)
+                          updateSetupProfileField("customSetup", event.target.value)
                         }
-                        rows={3}
-                        placeholder="Example: Carrying tyre levers, plug kit, compressor, spare belt, or recovery tools."
+                        rows={4}
+                        placeholder="Example: Custom wiring, race setup, luggage rack changes, cooling mods, comfort changes, or anything unique about this vehicle."
                         className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-orange-500"
                       />
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
+
             </div>
 
-            <div className="mt-5 flex gap-3">
+            <div className="mt-5 flex shrink-0 gap-3">
               <button
                 type="button"
                 onClick={() => setIsEditModalOpen(false)}

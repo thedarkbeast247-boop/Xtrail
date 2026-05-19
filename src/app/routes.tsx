@@ -16,6 +16,7 @@ import { RideDetail } from './pages/RideDetail';
 import { SavedTrails } from './pages/SavedTrails';
 import { CompletedTrails } from './pages/CompletedTrails';
 
+
 export const router = createBrowserRouter([
   {
     path: '/',
