@@ -15,6 +15,8 @@ import { RideHistory } from './pages/RideHistory';
 import { RideDetail } from './pages/RideDetail';
 import { SavedTrails } from './pages/SavedTrails';
 import { CompletedTrails } from './pages/CompletedTrails';
+import { GroupDetail } from './pages/GroupDetail';
+import { RiderDetail } from './pages/RiderDetail';
 
 
 export const router = createBrowserRouter([
@@ -71,6 +73,22 @@ export const router = createBrowserRouter([
     Component: () => (
       <Layout>
         <Friends />
+      </Layout>
+    ),
+  },
+  {
+  path: '/friends/riders/:riderId',
+    Component: () => (
+      <Layout>
+        <RiderDetail />
+      </Layout>
+    ),
+  },
+  {
+  path: '/friends/groups/:groupId',
+    Component: () => (
+      <Layout>
+        <GroupDetail />
       </Layout>
     ),
   },

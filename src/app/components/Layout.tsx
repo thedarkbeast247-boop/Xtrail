@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router';
 import { Map, Compass, User, Car } from 'lucide-react';
+import { AppNotificationViewport } from '../context/NotificationContext';
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
@@ -12,6 +13,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-neutral-950 flex items-center justify-center p-0 sm:p-4">
       {/* Mobile Container */}
       <div className="w-full max-w-[430px] min-h-screen sm:h-[932px] sm:min-h-0 bg-neutral-950 flex flex-col relative shadow-2xl sm:border-x border-neutral-800 sm:rounded-3xl overflow-hidden">
+        <AppNotificationViewport />
         {/* Mobile Notch (Optional) */}
         <div className="hidden sm:flex absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-6 bg-black rounded-b-2xl z-50"></div>
 
