@@ -52,12 +52,6 @@ interface GroupAnnouncement {
   date: string;
 }
 
-interface RideChecklistItem {
-  id: string;
-  label: string;
-  description: string;
-}
-
 type GroupInviteStatus = "not_invited" | "invited" | "joined";
 
 interface GroupInviteCandidate {
@@ -127,7 +121,6 @@ const rideVehicleTypeOptions = [
 
 const GROUPS_STORAGE_KEY = "xtrail-riding-groups";
 const GROUP_RIDES_STORAGE_KEY = "xtrail-group-rides";
-const GROUP_CHECKLIST_STORAGE_KEY = "xtrail-group-checklist";
 const GROUP_INVITES_STORAGE_KEY = "xtrail-group-invites";
 const GROUP_RIDE_INVITES_STORAGE_KEY = "xtrail-group-ride-invites";
 
@@ -244,49 +237,6 @@ const mockGroupAnnouncements: GroupAnnouncement[] = [
     message:
       "Recent rides have been hot and dusty. Bring extra water and make sure your phone is fully charged before leaving.",
     date: "2026-05-28",
-  },
-];
-
-const mockRideChecklist: RideChecklistItem[] = [
-  {
-    id: "helmet",
-    label: "Helmet",
-    description: "Helmet and riding protection are ready.",
-  },
-  {
-    id: "water",
-    label: "Water",
-    description: "Enough water packed for the full ride.",
-  },
-  {
-    id: "fuel",
-    label: "Fuel",
-    description: "Vehicle has enough fuel for the route.",
-  },
-  {
-    id: "tools",
-    label: "Tools",
-    description: "Basic tools, repair kit, and spares packed.",
-  },
-  {
-    id: "phone",
-    label: "Phone charged",
-    description: "Phone battery charged and emergency contacts available.",
-  },
-  {
-    id: "first-aid",
-    label: "First aid",
-    description: "First aid kit or emergency supplies packed.",
-  },
-  {
-    id: "recovery",
-    label: "Recovery gear",
-    description: "Tow strap, compressor, plugs, or recovery gear ready.",
-  },
-  {
-    id: "route",
-    label: "Route downloaded",
-    description: "Route, map, or trail info saved before leaving.",
   },
 ];
 
@@ -570,24 +520,7 @@ export function GroupDetail() {
     useState<GroupRideInvite[]>(loadGroupRideInvites);
   const [isInviteFriendsOpen, setIsInviteFriendsOpen] = useState(false);
   const [selectedInviteRiderIds, setSelectedInviteRiderIds] = useState<string[]>([]);
-  
-  const [completedChecklistItems, setCompletedChecklistItems] = useState<string[]>(
-    () => {
-      const storedChecklist = localStorage.getItem(GROUP_CHECKLIST_STORAGE_KEY);
 
-      if (!storedChecklist) {
-        return [];
-      }
-
-      try {
-        const parsedChecklist = JSON.parse(storedChecklist) as string[];
-        return Array.isArray(parsedChecklist) ? parsedChecklist : [];
-      } catch (error) {
-        console.error("Failed to load group checklist:", error);
-        return [];
-      }
-    }
-  );
 
   const [isCreateRideOpen, setIsCreateRideOpen] = useState(false);
 
@@ -615,13 +548,6 @@ export function GroupDetail() {
   useEffect(() => {
     localStorage.setItem(GROUPS_STORAGE_KEY, JSON.stringify(groups));
   }, [groups]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      GROUP_CHECKLIST_STORAGE_KEY,
-      JSON.stringify(completedChecklistItems)
-    );
-  }, [completedChecklistItems]);
 
   useEffect(() => {
     localStorage.setItem(GROUP_RIDES_STORAGE_KEY, JSON.stringify(groupRides));
@@ -765,8 +691,6 @@ export function GroupDetail() {
       })
     : [];
 
-  const completedChecklistCount = completedChecklistItems.length;
-
   const visibleInviteCandidates = mockInviteCandidates.map((candidate) => {
     const invite = groupInvites.find(
       (item) => item.groupId === groupId && item.riderId === candidate.id
@@ -789,19 +713,6 @@ export function GroupDetail() {
   const pendingInviteCount = pendingInvites.length;
   const acceptedInviteCount = acceptedInvites.length;
   const selectedInviteCount = selectedInviteRiderIds.length;
-
-  const checklistProgressPercent =
-    mockRideChecklist.length === 0
-      ? 0
-      : Math.round((completedChecklistCount / mockRideChecklist.length) * 100);
-
-  const toggleChecklistItem = (itemId: string) => {
-    setCompletedChecklistItems((prev) =>
-      prev.includes(itemId)
-        ? prev.filter((id) => id !== itemId)
-        : [...prev, itemId]
-    );
-  };
 
   const toggleInviteSelection = (riderId: string) => {
     const candidate = visibleInviteCandidates.find((item) => item.id === riderId);
@@ -981,88 +892,7 @@ export function GroupDetail() {
       })
     );
   };
-
-  const handleAcceptRideInvite = (inviteId: string) => {
-    const rideInvite = groupRideInvites.find((invite) => invite.id === inviteId);
-
-    if (!rideInvite || rideInvite.status !== "invited") return;
-
-    const ride = groupRides.find((item) => item.id === rideInvite.rideId);
-    const member = visibleGroupMembers.find(
-      (groupMember) => groupMember.id === rideInvite.memberId
-    );
-
-    if (!ride) return;
-
-    if (ride.joinedRiders >= ride.maxRiders) {
-      showNotification({
-        title: "Ride is full",
-        message: `${ride.title} has reached the maximum number of riders.`,
-        variant: "warning",
-      });
-
-      return;
-    }
-
-    setGroupRideInvites((prev) =>
-      prev.map((invite) =>
-        invite.id === inviteId
-          ? {
-              ...invite,
-              status: "accepted",
-            }
-          : invite
-      )
-    );
-
-    setGroupRides((prev) =>
-      prev.map((item) =>
-        item.id === ride.id
-          ? {
-              ...item,
-              joinedRiders: Math.min(item.joinedRiders + 1, item.maxRiders),
-            }
-          : item
-      )
-    );
-
-    showNotification({
-      title: "Ride invite accepted",
-      message: `${member?.name ?? "Rider"} accepted the invite for ${ride.title}.`,
-      variant: "success",
-    });
-  };
-
-  const handleDeclineRideInvite = (inviteId: string) => {
-    const rideInvite = groupRideInvites.find((invite) => invite.id === inviteId);
-
-    if (!rideInvite || rideInvite.status !== "invited") return;
-
-    const ride = groupRides.find((item) => item.id === rideInvite.rideId);
-    const member = visibleGroupMembers.find(
-      (groupMember) => groupMember.id === rideInvite.memberId
-    );
-
-    setGroupRideInvites((prev) =>
-      prev.map((invite) =>
-        invite.id === inviteId
-          ? {
-              ...invite,
-              status: "declined",
-            }
-          : invite
-      )
-    );
-
-    showNotification({
-      title: "Ride invite declined",
-      message: `${member?.name ?? "Rider"} declined the invite for ${
-        ride?.title ?? "this ride"
-      }.`,
-      variant: "info",
-    });
-  };
-
+ 
   const handleOpenRideInviteModal = (rideId: string) => {
     setRideInviteModalRideId(rideId);
     setSelectedExistingRideInviteMemberIds([]);
@@ -1276,25 +1106,21 @@ export function GroupDetail() {
   const renderRideInvites = (ride: GroupRide) => {
     const rideInviteRows = getRideInviteMemberRows(ride.id);
     const rideInviteCounts = getRideInviteCounts(ride.id);
-    const pendingInviteRows = rideInviteRows.filter(
-      ({ invite }) => invite.status === "invited"
-    );
 
     if (rideInviteRows.length === 0) {
       return null;
     }
 
     return (
-      <div className="mt-4 rounded-2xl border border-neutral-800 bg-neutral-900/80 p-3">
-        <div className="flex items-start justify-between gap-3">
+      <div className="mt-4 rounded-2xl border border-neutral-800 bg-neutral-900/70 px-3 py-3">
+        <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
+            <p className="text-xs font-semibold text-neutral-300">
               Ride Invites
             </p>
 
-            <p className="mt-1 text-xs text-neutral-500">
-              {rideInviteRows.length} member
-              {rideInviteRows.length === 1 ? "" : "s"} invited
+            <p className="mt-0.5 text-xs text-neutral-500">
+              {rideInviteRows.length} invited
             </p>
           </div>
 
@@ -1320,10 +1146,10 @@ export function GroupDetail() {
         </div>
 
         <div className="mt-3 flex items-center gap-2 overflow-hidden">
-          {rideInviteRows.slice(0, 5).map(({ invite, member }) => (
+          {rideInviteRows.slice(0, 6).map(({ invite, member }) => (
             <div
               key={invite.id}
-              className={`relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border text-xs font-bold text-white ${
+              className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border text-[10px] font-bold text-white ${
                 invite.status === "accepted"
                   ? "border-emerald-500/40 bg-emerald-500/20"
                   : invite.status === "declined"
@@ -1336,65 +1162,19 @@ export function GroupDetail() {
             </div>
           ))}
 
-          {rideInviteRows.length > 5 && (
-            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-neutral-700 bg-neutral-950 text-xs font-semibold text-neutral-400">
-              +{rideInviteRows.length - 5}
+          {rideInviteRows.length > 6 && (
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-neutral-700 bg-neutral-950 text-[10px] font-semibold text-neutral-400">
+              +{rideInviteRows.length - 6}
             </div>
           )}
+
+          <Link
+            to={`/friends/groups/${ride.groupId}/rides/${ride.id}`}
+            className="ml-auto flex-shrink-0 text-xs font-semibold text-orange-400 hover:text-orange-300"
+          >
+            Manage
+          </Link>
         </div>
-
-        {pendingInviteRows.length > 0 && (
-          <div className="mt-3 space-y-2">
-            {pendingInviteRows.map(({ invite, member }) => (
-              <div
-                key={invite.id}
-                className="rounded-xl border border-neutral-800 bg-neutral-950 px-3 py-3"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-red-600 text-xs font-bold text-white">
-                    {member.avatar}
-
-                    {member.isOnline && (
-                      <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-neutral-950 bg-emerald-500" />
-                    )}
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-semibold text-white">
-                      {member.name}
-                    </p>
-
-                    <p className="mt-0.5 text-[11px] text-neutral-500">
-                      {member.vehicleType}
-                    </p>
-                  </div>
-
-                  <span className="rounded-full border border-orange-500/20 bg-orange-500/10 px-2 py-0.5 text-[10px] font-semibold text-orange-400">
-                    Pending
-                  </span>
-                </div>
-
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleAcceptRideInvite(invite.id)}
-                    className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-400 transition hover:bg-emerald-500/15"
-                  >
-                    Accept
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleDeclineRideInvite(invite.id)}
-                    className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-400 transition hover:bg-red-500/15"
-                  >
-                    Decline
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     );
   };
@@ -1793,87 +1573,6 @@ export function GroupDetail() {
           )}
         </div>
 
-        {/* Group Ride Checklist */}
-        <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-base font-semibold text-white">
-                Group Ride Checklist
-              </h2>
-
-              <p className="mt-1 text-sm text-neutral-400">
-                Prep items before joining or starting a group ride.
-              </p>
-            </div>
-
-            <span className="rounded-full border border-neutral-700 bg-neutral-950 px-3 py-1 text-xs font-medium text-neutral-300">
-              {completedChecklistCount}/{mockRideChecklist.length}
-            </span>
-          </div>
-
-          <div className="mt-4">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-xs font-medium text-neutral-400">
-                Checklist progress
-              </p>
-
-              <p className="text-xs font-semibold text-orange-400">
-                {checklistProgressPercent}%
-              </p>
-            </div>
-
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-neutral-800">
-              <div
-                className="h-full rounded-full bg-orange-500"
-                style={{ width: `${checklistProgressPercent}%` }}
-              />
-            </div>
-          </div>
-
-          <div className="mt-4 grid gap-3">
-            {mockRideChecklist.map((item) => {
-              const isCompleted = completedChecklistItems.includes(item.id);
-
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => toggleChecklistItem(item.id)}
-                  className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition ${
-                    isCompleted
-                      ? "border-emerald-500/20 bg-emerald-500/10"
-                      : "border-neutral-800 bg-neutral-950 hover:border-neutral-700"
-                  }`}
-                >
-                  <div
-                    className={`mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border ${
-                      isCompleted
-                        ? "border-emerald-500 bg-emerald-500 text-black"
-                        : "border-neutral-700 text-neutral-500"
-                    }`}
-                  >
-                    {isCompleted && <CheckCircle2 className="h-4 w-4" />}
-                  </div>
-
-                  <div className="min-w-0">
-                    <p
-                      className={`text-sm font-semibold ${
-                        isCompleted ? "text-emerald-400" : "text-white"
-                      }`}
-                    >
-                      {item.label}
-                    </p>
-
-                    <p className="mt-1 text-xs leading-5 text-neutral-500">
-                      {item.description}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
         {/* Upcoming rides */}
         <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
           <div className="flex items-start justify-between gap-3">
@@ -1981,6 +1680,14 @@ export function GroupDetail() {
                         ))}
                     </div>
                     
+                    <Link
+                      to={`/friends/groups/${group.id}/rides/${ride.id}`}
+                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-neutral-700 px-3 py-2.5 text-xs font-semibold text-neutral-300 transition hover:bg-neutral-800 hover:text-white"
+                    >
+                      <Route className="h-4 w-4" />
+                      View Ride Details
+                    </Link>
+
                     {renderRideInvites(ride)}
 
                       <div className="mt-4 grid grid-cols-2 gap-2">
