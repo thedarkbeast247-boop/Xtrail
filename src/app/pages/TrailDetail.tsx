@@ -28,7 +28,7 @@ import type { Trail } from "../types/trail";
 import { useEffect, useMemo, useState } from "react";
 import { type CompletedTrail } from "../types/completedTrail";
 import { type SavedTrail } from "../types/savedTrail";
-
+import { useNotification } from "../context/NotificationContext";
 
 function getDifficultyStyles(difficulty: Trail["difficulty"]) {
   switch (difficulty) {
@@ -71,6 +71,7 @@ const getVehicleIcon = (vehicle: string) => {
 };
 
 export function TrailDetail() {
+  const { showNotification } = useNotification();
   const { id } = useParams();
   const [completedTrails, setCompletedTrails] = useState<CompletedTrail[]>([]);
   const [savedTrails, setSavedTrails] = useState<SavedTrail[]>([]);
@@ -209,10 +210,19 @@ export function TrailDetail() {
       }
 
       await navigator.clipboard.writeText(shareText);
-      alert("Trail link copied to clipboard.");
+
+      showNotification({
+        title: "Trail link copied",
+        message: "The trail link was copied to your clipboard.",
+        variant: "success",
+      });
     } catch (error) {
       console.error("Failed to share trail:", error);
-      alert("Unable to share trail right now.");
+      showNotification({
+        title: "Share failed",
+        message: "Unable to share this trail right now.",
+        variant: "error",
+      });
     }
   };
 
@@ -255,9 +265,19 @@ export function TrailDetail() {
       setShowSendInXtrail(false);
       console.log(`Sent ${trail.name} to ${target.name}`);
 
+      showNotification({
+        title: "Trail sent",
+        message: `${trail.name} was sent to ${target.name}.`,
+        variant: "success",
+      });
+
     } catch (error) {
       console.error("Failed to send trail in Xtrail:", error);
-      alert("Unable to send trail right now.");
+      showNotification({
+        title: "Send failed",
+        message: "Unable to send this trail right now.",
+        variant: "error",
+      });
     }
   };
 

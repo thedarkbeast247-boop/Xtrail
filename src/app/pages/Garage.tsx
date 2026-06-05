@@ -21,6 +21,7 @@ import {
 } from "../components/ui/select";
 import { useVehicles } from "../context/VehicleContext";
 import type { VehicleType } from "../types/vehicle";
+import { useNotification } from "../context/NotificationContext";
 
 const vehicleTypeOptions: { label: string; value: VehicleType }[] = [
   { label: "Dirt Bike", value: "dirt-bike" },
@@ -55,6 +56,7 @@ function getVehicleInitials(name: string) {
 }
 
 export function Garage() {
+  const { showNotification } = useNotification();
   const {
   vehicles,
   activeVehicleId,
@@ -105,7 +107,12 @@ export function Garage() {
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      alert("Please upload an image file.");
+      showNotification({
+        title: "Image file needed",
+        message: "Please upload a valid image file.",
+        variant: "warning",
+      });
+
       return;
     }
 
@@ -130,7 +137,12 @@ export function Garage() {
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      alert("Please upload an image file.");
+      showNotification({
+        title: "Image file needed",
+        message: "Please upload a valid image file.",
+        variant: "warning",
+      });
+
       return;
     }
 
@@ -155,7 +167,12 @@ export function Garage() {
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      alert("Please upload an image file.");
+      showNotification({
+        title: "Image file needed",
+        message: "Please upload a valid image file.",
+        variant: "warning",
+      });
+
       return;
     }
 
@@ -180,7 +197,12 @@ export function Garage() {
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      alert("Please upload an image file.");
+      showNotification({
+        title: "Image file needed",
+        message: "Please upload a valid image file.",
+        variant: "warning",
+      });
+
       return;
     }
 
@@ -232,8 +254,18 @@ export function Garage() {
   };
 
   const handleAddVehicle = () => {
-    if (!newVehicle.name.trim() || !newVehicle.type || !newVehicle.brand.trim() || !newVehicle.model.trim()) {
-      alert("Please fill in vehicle name, type, brand, and model.");
+    if (
+      !newVehicle.name.trim() ||
+      !newVehicle.type ||
+      !newVehicle.brand.trim() ||
+      !newVehicle.model.trim()
+    ) {
+      showNotification({
+        title: "Vehicle details needed",
+        message: "Please fill in vehicle name, type, brand, and model.",
+        variant: "warning",
+      });
+
       return;
     }
 
@@ -268,6 +300,11 @@ export function Garage() {
       image: "",
       bannerImage: "",
     });
+    showNotification({
+      title: "Vehicle added",
+      message: `${newVehicle.name.trim()} was added to your garage.`,
+      variant: "success",
+    });
   };
 
   const handleSaveEditVehicle = () => {
@@ -279,7 +316,11 @@ export function Garage() {
       !editVehicle.brand.trim() ||
       !editVehicle.model.trim()
     ) {
-      alert("Please fill in vehicle name, type, brand, and model.");
+      showNotification({
+        title: "Vehicle details needed",
+        message: "Please fill in vehicle name, type, brand, and model.",
+        variant: "warning",
+      });
       return;
     }
 
@@ -300,6 +341,12 @@ export function Garage() {
 
     setIsEditModalOpen(false);
     setEditingVehicleId(null);
+
+    showNotification({
+      title: "Vehicle updated",
+      message: `${editVehicle.name.trim()} was updated successfully.`,
+      variant: "success",
+    });
   };
 
   const totalVehicles = vehicles.length;

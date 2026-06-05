@@ -990,27 +990,52 @@ export function GroupDetail() {
     const trailName = newGroupRide.trailName.trim();
 
     if (!title) {
-      alert("Please enter a ride title.");
+      showNotification({
+        title: "Ride title needed",
+        message: "Please enter a ride title before creating the group ride.",
+        variant: "warning",
+      });
+
       return;
     }
 
     if (!date) {
-      alert("Please select a ride date.");
+      showNotification({
+        title: "Ride date needed",
+        message: "Please select a date for this group ride.",
+        variant: "warning",
+      });
+
       return;
     }
 
     if (!time) {
-      alert("Please select a ride time.");
+      showNotification({
+        title: "Ride time needed",
+        message: "Please select a time for this group ride.",
+        variant: "warning",
+      });
+
       return;
     }
 
     if (!meetingPoint) {
-      alert("Please enter a meeting point.");
+      showNotification({
+        title: "Meeting point needed",
+        message: "Please enter where riders should meet.",
+        variant: "warning",
+      });
+
       return;
     }
 
     if (!trailName) {
-      alert("Please enter a trail or route name.");
+      showNotification({
+        title: "Route name needed",
+        message: "Please enter the trail or route name for this ride.",
+        variant: "warning",
+      });
+
       return;
     }
 

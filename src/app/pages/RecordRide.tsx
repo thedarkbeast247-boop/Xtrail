@@ -5,8 +5,11 @@ import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { mockVehicleProfiles } from '../data/mockData';
+import { useNotification } from '../context/NotificationContext';
 
 export function RecordRide() {
+  const { showNotification } = useNotification();
+
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [duration, setDuration] = useState(0);
@@ -18,10 +21,10 @@ export function RecordRide() {
   const [pathPoints, setPathPoints] = useState<{x: number, y: number}[]>([]);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
+    let interval: ReturnType<typeof window.setInterval> | null = null;
 
     if (isRecording && !isPaused) {
-      interval = setInterval(() => {
+      interval = window.setInterval(() => {
         setDuration(prev => prev + 1);
         setDistance(prev => prev + 0.05);
         setCurrentSpeed(Math.random() * 20 + 5);
@@ -39,13 +42,18 @@ export function RecordRide() {
     }
 
     return () => {
-      if (interval) clearInterval(interval);
+      if (interval) window.clearInterval(interval);
     };
   }, [isRecording, isPaused]);
 
   const handleStart = () => {
     if (!selectedVehicle) {
-      alert('Please select a vehicle type first');
+      showNotification({
+        title: "Vehicle needed",
+        message: "Please select a vehicle type before starting the ride.",
+        variant: "warning",
+      });
+
       return;
     }
     setIsRecording(true);

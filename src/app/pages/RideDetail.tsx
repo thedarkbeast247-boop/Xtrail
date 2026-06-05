@@ -3,8 +3,10 @@ import { Link, useParams } from "react-router";
 import { ArrowLeft, Calendar, Clock, Map, Hash, Car, Share2, Trash2, Image as ImageIcon, Route } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { type RideImage, type SavedRide } from "../utils/rideStats";
+import { useNotification } from "../context/NotificationContext";
 
 export function RideDetail() {
+    const { showNotification } = useNotification();
   const { rideId } = useParams();
   const [ride, setRide] = useState<SavedRide | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -82,7 +84,11 @@ export function RideDetail() {
         });
         } else {
         await navigator.clipboard.writeText(shareText);
-        alert("Ride summary copied to clipboard");
+            showNotification({
+                title: "Ride copied",
+                message: "The ride summary was copied to your clipboard.",
+                variant: "success",
+            });
         }
     } catch (error) {
         console.error("Failed to share ride:", error);
@@ -100,7 +106,11 @@ export function RideDetail() {
     const existingImages = ride.galleryImages ?? [];
 
     if (existingImages.length >= 5) {
-        alert("You can only upload up to 5 images per ride.");
+        showNotification({
+            title: "Image limit reached",
+            message: "You can only upload up to 5 images per ride.",
+            variant: "warning",
+        });
         event.target.value = "";
         return;
     }
@@ -109,7 +119,13 @@ export function RideDetail() {
     const selectedFiles = Array.from(files).slice(0, remainingSlots);
 
     if (selectedFiles.length < files.length) {
-        alert(`Only ${remainingSlots} more image(s) can be added to this ride.`);
+        showNotification({
+        title: "Image limit reached",
+        message: `Only ${remainingSlots} more image${
+            remainingSlots === 1 ? "" : "s"
+        } can be added to this ride.`,
+        variant: "warning",
+        });
     }
 
     setIsUploadingImages(true);
@@ -140,7 +156,11 @@ export function RideDetail() {
         setRide(updatedRide);
     } catch (error) {
         console.error("Failed to upload ride images:", error);
-        alert("Failed to add ride images.");
+        showNotification({
+            title: "Upload failed",
+            message: "Failed to add ride images.",
+            variant: "error",
+        });
     } finally {
         setIsUploadingImages(false);
         event.target.value = "";

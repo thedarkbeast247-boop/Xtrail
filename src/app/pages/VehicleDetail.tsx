@@ -30,6 +30,7 @@ import type { VehicleSetupProfile, VehicleType } from "../types/vehicle";
 import { getVehicleSetupConfig } from "../utils/vehicleSetupConfig";
 import { useVehicles } from "../context/VehicleContext";
 import { useServices } from "../context/ServiceContext";
+import { useNotification } from "../context/NotificationContext";
 import { mockTrails } from "../data/mockData";
 import type { SavedRide } from "../utils/rideStats";
 import {
@@ -427,6 +428,7 @@ const emptySetupProfile: VehicleSetupProfile = {
 };
 
 export function VehicleDetail() {
+  const { showNotification } = useNotification();
   const { vehicleId } = useParams();
   const { vehicles, activeVehicleId, updateVehicle } = useVehicles();
   const { getServicesForVehicle } = useServices();
@@ -547,7 +549,12 @@ export function VehicleDetail() {
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      alert("Please upload an image file.");
+      showNotification({
+        title: "Image file needed",
+        message: "Please upload a valid image file.",
+        variant: "warning",
+      });
+
       return;
     }
 

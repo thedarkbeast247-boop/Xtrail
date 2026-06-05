@@ -15,6 +15,7 @@ import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Link } from 'react-router';
+import { useNotification } from '../context/NotificationContext';
 
 type FriendStatus = "friend" | "requested" | "suggested";
 type FriendFilter = "all" | "friends" | "requests" | "suggested" | "online";
@@ -124,6 +125,8 @@ const FRIENDS_STORAGE_KEY = "xtrail-friends";
 const GROUPS_STORAGE_KEY = "xtrail-riding-groups";
 
 export function Friends() {
+  const { showNotification } = useNotification();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('friends');
   const [friendFilter, setFriendFilter] = useState<FriendFilter>('all');
@@ -306,7 +309,12 @@ export function Friends() {
     const groupDescription = newGroup.description.trim();
 
     if (!groupName) {
-      alert("Please enter a group name.");
+      showNotification({
+        title: "Group name needed",
+        message: "Please enter a group name before creating a new group.",
+        variant: "warning",
+      });
+
       return;
     }
 
@@ -329,6 +337,12 @@ export function Friends() {
 
     setIsCreateGroupOpen(false);
     setActiveTab("groups");
+
+    showNotification({
+      title: "Group created",
+      message: `${groupName} was added to your riding groups.`,
+      variant: "success",
+    });
   };
 
   const handleJoinGroup = (groupId: string) => {

@@ -12,6 +12,7 @@ import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { useVehicles } from "../context/VehicleContext";
 import { useServices } from "../context/ServiceContext";
+import { useNotification } from "../context/NotificationContext";
 import {
   Dialog,
   DialogContent,
@@ -55,6 +56,7 @@ const serviceTypes = [
 ];
 
 export function ServiceLog() {
+  const { showNotification } = useNotification();
   const { vehicles, activeVehicle, setActiveVehicleId } = useVehicles();
   const { addService, getServicesForVehicle } = useServices();
   const [searchParams] = useSearchParams();
@@ -144,12 +146,22 @@ export function ServiceLog() {
 
   const handleAddService = () => {
     if (!selectedVehicle) {
-      alert("Please select a vehicle first.");
+      showNotification({
+        title: "Vehicle needed",
+        message: "Please select a vehicle before adding a service entry.",
+        variant: "warning",
+      });
+
       return;
     }
 
     if (!newService.type || !newService.date) {
-      alert("Please fill in service type and date.");
+      showNotification({
+        title: "Service details needed",
+        message: "Please fill in the service type and date before saving.",
+        variant: "warning",
+      });
+
       return;
     }
 
@@ -171,6 +183,14 @@ export function ServiceLog() {
       usageReading: "",
       notes: "",
     });
+
+    showNotification({
+      title: "Service added",
+      message: `${newService.type} was added to ${
+        selectedVehicle.brand
+      } ${selectedVehicle.model}.`,
+      variant: "success",
+    });
   };
 
   return (
@@ -191,7 +211,11 @@ export function ServiceLog() {
                 onClick={(e) => {
                   if (!selectedVehicle) {
                     e.preventDefault();
-                    alert("Please create and select a vehicle first.");
+                    showNotification({
+                      title: "Vehicle needed",
+                      message: "Please create and select a vehicle before adding a service entry.",
+                      variant: "warning",
+                    });
                   }
                 }}
               >
@@ -387,7 +411,12 @@ export function ServiceLog() {
               <Button
                 onClick={() => {
                   if (!selectedVehicle) {
-                    alert("Please select a vehicle first.");
+                    showNotification({
+                      title: "Vehicle needed",
+                      message: "Please select a vehicle before adding the first service entry.",
+                      variant: "warning",
+                    });
+
                     return;
                   }
                   setIsAddModalOpen(true);
