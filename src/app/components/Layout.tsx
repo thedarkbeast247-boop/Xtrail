@@ -14,6 +14,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Mobile Container */}
       <div className="w-full max-w-[430px] min-h-screen sm:h-[932px] sm:min-h-0 bg-neutral-950 flex flex-col relative shadow-2xl sm:border-x border-neutral-800 sm:rounded-3xl overflow-hidden">
         <AppNotificationViewport />
+        <div id="app-modal-root" className="pointer-events-none absolute inset-0 z-[80]" />
         {/* Mobile Notch (Optional) */}
         <div className="hidden sm:flex absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-6 bg-black rounded-b-2xl z-50"></div>
 

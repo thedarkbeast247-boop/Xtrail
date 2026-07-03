@@ -13,6 +13,8 @@ interface CreateServiceInput {
   vehicleId: string;
   title: string;
   description?: string;
+  cost?: number;
+  partsUsed?: string;
   date: string;
   hours?: number;
   mileage?: number;
@@ -21,6 +23,8 @@ interface CreateServiceInput {
 interface UpdateServiceInput {
   title?: string;
   description?: string;
+  cost?: number;
+  partsUsed?: string;
   date?: string;
   hours?: number;
   mileage?: number;
@@ -44,6 +48,8 @@ function createService(input: CreateServiceInput): Service {
     vehicleId: input.vehicleId,
     title: input.title,
     description: input.description ?? "",
+    cost: input.cost ?? 0,
+    partsUsed: input.partsUsed ?? "",
     date: input.date,
     hours: input.hours ?? 0,
     mileage: input.mileage ?? 0,

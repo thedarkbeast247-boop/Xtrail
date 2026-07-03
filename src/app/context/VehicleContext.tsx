@@ -28,6 +28,7 @@ interface CreateVehicleInput {
   image?: string;
   bannerImage?: string;
   setupProfile?: VehicleSetupProfile;
+  color?: string;
 }
 
 interface UpdateVehicleInput {
@@ -44,6 +45,7 @@ interface UpdateVehicleInput {
   image?: string;
   bannerImage?: string;
   setupProfile?: VehicleSetupProfile;
+  color?: string;
 }
 
 interface VehicleContextValue {
@@ -75,6 +77,7 @@ function createVehicle(input: CreateVehicleInput): Vehicle {
     notes: input.notes ?? "",
     image: input.image ?? "",
     bannerImage: input.bannerImage ?? "",
+    color: input.color ?? "#ef4444",
     setupProfile: input.setupProfile ?? {},
     createdAt: now,
     updatedAt: now,

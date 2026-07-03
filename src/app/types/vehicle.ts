@@ -88,6 +88,7 @@ export interface Vehicle {
   notes?: string;
   image?: string;
   bannerImage?: string;
+  color?: string;
   setupProfile?: VehicleSetupProfile;
   createdAt: string;
   updatedAt: string;
