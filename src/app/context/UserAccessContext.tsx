@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -93,17 +94,67 @@ const demoFreeUser: UserAccessProfile = {
   updatedAt: now,
 };
 
+const USER_ACCESS_STORAGE_KEY = "xtrail-user-access-profiles";
+
+function getInitialUserAccessProfiles() {
+  if (typeof window === "undefined") {
+    return [ownerAccessProfile, demoFreeUser];
+  }
+
+  const storedProfiles = window.localStorage.getItem(USER_ACCESS_STORAGE_KEY);
+
+  if (!storedProfiles) {
+    return [ownerAccessProfile, demoFreeUser];
+  }
+
+  try {
+    const parsedProfiles = JSON.parse(storedProfiles) as UserAccessProfile[];
+
+    const storedOwner = parsedProfiles.find(
+      (user) => user.id === ownerAccessProfile.id
+    );
+
+    const lockedOwnerProfile: UserAccessProfile = {
+      ...ownerAccessProfile,
+      ...storedOwner,
+      id: ownerAccessProfile.id,
+      email: ownerAccessProfile.email,
+      displayName: ownerAccessProfile.displayName,
+      role: "global_admin",
+      accountStatus: "active",
+      twoFactorRequired: true,
+      updatedAt: new Date().toISOString(),
+    };
+
+    const otherProfiles = parsedProfiles.filter(
+      (user) => user.id !== ownerAccessProfile.id
+    );
+
+    if (otherProfiles.length === 0) {
+      return [lockedOwnerProfile, demoFreeUser];
+    }
+
+    return [lockedOwnerProfile, ...otherProfiles];
+  } catch (error) {
+    console.error("Failed to load user access profiles:", error);
+    return [ownerAccessProfile, demoFreeUser];
+  }
+}
+
 const UserAccessContext = createContext<UserAccessContextValue | undefined>(
   undefined
 );
 
 export function UserAccessProvider({ children }: { children: ReactNode }) {
-  const [users, setUsers] = useState<UserAccessProfile[]>([
-    ownerAccessProfile,
-    demoFreeUser,
-  ]);
+  const [users, setUsers] = useState<UserAccessProfile[]>(
+    getInitialUserAccessProfiles
+  );
 
   const [currentUserId] = useState(ownerAccessProfile.id);
+
+  useEffect(() => {
+    window.localStorage.setItem(USER_ACCESS_STORAGE_KEY, JSON.stringify(users));
+  }, [users]);
 
   const currentUserAccess =
     users.find((user) => user.id === currentUserId) ?? ownerAccessProfile;

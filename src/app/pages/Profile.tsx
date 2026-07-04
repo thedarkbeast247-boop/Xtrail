@@ -18,6 +18,7 @@ import {
   Clock,
   Bookmark,
   CheckCircle2,
+  ShieldCheck,
 } from "lucide-react";
 import { Link } from "react-router";
 import { Button } from "../components/ui/button";
@@ -28,9 +29,14 @@ import { useEffect, useMemo, useState } from "react";
 import { getRideStats, formatRideDuration, type SavedRide } from "../utils/rideStats";
 import { type CompletedTrail } from "../types/completedTrail";
 import { type SavedTrail } from "../types/savedTrail";
+import { useUserAccess } from "../context/UserAccessContext";
+import { canAccessAdminArea } from "../lib/accessControl";
 
 
 export function Profile() {
+  const { currentUserAccess } = useUserAccess();
+  const canOpenAdminArea = canAccessAdminArea(currentUserAccess);
+
   const { vehicles, activeVehicle, setActiveVehicleId } = useVehicles();
   const { getServicesForVehicle } = useServices();
   const [savedRides, setSavedRides] = useState<SavedRide[]>([]);
@@ -275,6 +281,17 @@ export function Profile() {
                 <div className="text-white text-xs text-center">Garage</div>
               </div>
             </Link>
+            {canOpenAdminArea && (
+              <Link to="/admin/users">
+                <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-3 min-h-[108px] flex flex-col items-center justify-center
+                  transition-all duration-200 hover:border-neutral-700 hover:bg-neutral-800/60 active:scale-95">
+                  <div className="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center mx-auto mb-2">
+                    <ShieldCheck className="w-5 h-5 text-red-500" />
+                  </div>
+                  <div className="text-white text-xs text-center">Admin</div>
+                </div>
+              </Link>
+            )}
           </div>
         </div>
 

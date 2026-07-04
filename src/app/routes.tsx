@@ -18,6 +18,7 @@ import { CompletedTrails } from './pages/CompletedTrails';
 import { GroupDetail } from './pages/GroupDetail';
 import { RiderDetail } from './pages/RiderDetail';
 import { GroupRideDetail } from './pages/GroupRideDetail';
+import { AdminUsers } from './pages/AdminUsers';
 
 
 export const router = createBrowserRouter([
@@ -162,6 +163,14 @@ export const router = createBrowserRouter([
     Component: () => (
       <Layout>
         <CompletedTrails />
+      </Layout>
+    ),
+  },
+  {
+    path: '/admin/users',
+    Component: () => (
+      <Layout>
+        <AdminUsers />
       </Layout>
     ),
   },

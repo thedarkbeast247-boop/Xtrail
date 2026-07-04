@@ -66,7 +66,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <Link
               to="/profile"
               className={`flex flex-col items-center gap-1 px-3 py-2 transition-colors ${
-                isActive('/profile') || isActive('/service-log') || isActive('/friends') || isActive('/progress') || isActive('/achievements') || isActive('/subscription')
+                isActive('/profile') || isActive('/service-log') || isActive('/friends') || isActive('/progress') || isActive('/achievements') || isActive('/subscription') || location.pathname.startsWith('/admin')
                   ? 'text-red-500'
                   : 'text-neutral-400 hover:text-neutral-200'
               }`}
