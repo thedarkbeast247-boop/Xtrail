@@ -53,8 +53,15 @@ export interface UserAccessProfile {
 
   trustLevel: number;
 
-  twoFactorEnabled: boolean;
+    twoFactorEnabled: boolean;
   twoFactorRequired: boolean;
+
+  twoFactorRequiredOnFirstLogin: boolean;
+  twoFactorRequiredForNewDevice: boolean;
+  twoFactorRequiredForSensitiveActions: boolean;
+
+  trustedDeviceIds: string[];
+  lastTwoFactorVerifiedAt?: string;
 
   createdAt: string;
   updatedAt: string;

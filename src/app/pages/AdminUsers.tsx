@@ -202,12 +202,12 @@ export function AdminUsers() {
     );
   };
 
-  const handleToggleTwoFactorRequired = (user: UserAccessProfile) => {
-    if (user.role === "global_admin" && user.twoFactorRequired) {
+  const handleRequireTwoFactorPolicy = (user: UserAccessProfile) => {
+    if (user.twoFactorRequired) {
       showNotification({
-        title: "2FA required",
-        message: "The Global Admin / Owner must always have 2FA required.",
-        variant: "warning",
+        title: "2FA policy already active",
+        message: `${user.displayName} already has the correct 2FA policy.`,
+        variant: "info",
       });
 
       return;
@@ -216,9 +216,11 @@ export function AdminUsers() {
     runAdminAction(
       () =>
         updateUserAccess(user.id, {
-          twoFactorRequired: !user.twoFactorRequired,
+          twoFactorRequired: true,
+          twoFactorRequiredForNewDevice: true,
+          twoFactorRequiredForSensitiveActions: true,
         }),
-      `${user.displayName}'s 2FA requirement was updated.`
+      `${user.displayName}'s 2FA policy was updated.`
     );
   };
 
@@ -329,7 +331,7 @@ export function AdminUsers() {
           </div>
 
           <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-3">
-            <p className="text-xs text-neutral-500">2FA required</p>
+            <p className="text-xs text-neutral-500">2FA policy</p>
             <p className="mt-1 text-xl font-bold text-white">
               {adminStats.twoFactorRequired}
             </p>
@@ -426,7 +428,7 @@ export function AdminUsers() {
                   <div className="rounded-xl border border-neutral-800 bg-neutral-950 p-3">
                     <p className="text-xs text-neutral-500">2FA required</p>
                     <p className="mt-1 text-sm font-semibold text-white">
-                      {user.twoFactorRequired ? "Yes" : "No"}
+                      {user.twoFactorRequired ? "Active" : "Optional"}
                     </p>
                   </div>
                 </div>
@@ -489,6 +491,7 @@ export function AdminUsers() {
                       <p className="mb-1 text-xs text-neutral-500">Plan</p>
                       <Select
                         value={user.plan}
+                        disabled={isProtectedOwner}
                         onValueChange={(value) =>
                           handlePlanChange(user, value as AppPlan)
                         }
@@ -551,6 +554,7 @@ export function AdminUsers() {
                       </p>
                       <Select
                         value={user.contributorStatus}
+                        disabled={isProtectedOwner}
                         onValueChange={(value) =>
                           handleContributorStatusChange(
                             user,
@@ -583,6 +587,7 @@ export function AdminUsers() {
                     </p>
                     <Input
                       value={manualAccessReasons[user.id] ?? ""}
+                      disabled={isProtectedOwner}
                       onChange={(event) =>
                         setManualAccessReasons((prev) => ({
                           ...prev,
@@ -608,8 +613,9 @@ export function AdminUsers() {
                     ) : (
                       <Button
                         type="button"
+                        disabled={isProtectedOwner}
                         onClick={() => handleGrantManualAccess(user)}
-                        className="bg-emerald-600 hover:bg-emerald-700"
+                        className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
                       >
                         Grant Full Access
                       </Button>
@@ -618,11 +624,11 @@ export function AdminUsers() {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => handleToggleTwoFactorRequired(user)}
+                      onClick={() => handleRequireTwoFactorPolicy(user)}
                       className="border-neutral-700 text-neutral-300 hover:bg-neutral-800"
                     >
                       <KeyRound className="mr-2 h-4 w-4" />
-                      {user.twoFactorRequired ? "2FA Required" : "Require 2FA"}
+                      {user.twoFactorRequired ? "2FA Policy Active" : "Enforce 2FA Policy"}
                     </Button>
                   </div>
                 </div>

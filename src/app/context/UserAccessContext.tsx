@@ -62,9 +62,80 @@ const ownerAccessProfile: UserAccessProfile = {
   twoFactorEnabled: true,
   twoFactorRequired: true,
 
+  twoFactorRequiredOnFirstLogin: true,
+  twoFactorRequiredForNewDevice: true,
+  twoFactorRequiredForSensitiveActions: true,
+
+  trustedDeviceIds: [],
+  lastTwoFactorVerifiedAt: "",
+
   createdAt: now,
   updatedAt: now,
 };
+
+const OWNER_USER_ID = ownerAccessProfile.id;
+
+const OWNER_PROTECTED_FIELDS: (keyof UserAccessProfile)[] = [
+  "id",
+  "email",
+  "displayName",
+  "role",
+  "plan",
+  "subscriptionStatus",
+  "accountStatus",
+  "manualFullAccess",
+  "manualFullAccessReason",
+  "manualFullAccessGrantedBy",
+  "manualFullAccessGrantedAt",
+  "contributorStatus",
+  "contributorAccessActive",
+  "trustLevel",
+  "twoFactorRequired",
+  "twoFactorRequiredOnFirstLogin",
+  "twoFactorRequiredForNewDevice",
+  "twoFactorRequiredForSensitiveActions",
+];
+
+function isOwnerUser(userId: string) {
+  return userId === OWNER_USER_ID;
+}
+
+function hasProtectedOwnerUpdate(updates: Partial<UserAccessProfile>) {
+  return OWNER_PROTECTED_FIELDS.some((field) => field in updates);
+}
+
+function lockOwnerProfile(user: UserAccessProfile): UserAccessProfile {
+  return {
+    ...user,
+
+    id: ownerAccessProfile.id,
+    email: ownerAccessProfile.email,
+    displayName: ownerAccessProfile.displayName,
+
+    role: "global_admin",
+    plan: "free",
+    subscriptionStatus: "none",
+    accountStatus: "active",
+
+    manualFullAccess: false,
+    manualFullAccessReason: "",
+    manualFullAccessGrantedBy: "",
+    manualFullAccessGrantedAt: "",
+
+    contributorStatus: "none",
+    contributorAccessActive: false,
+
+    trustLevel: 4,
+
+    twoFactorEnabled: true,
+    twoFactorRequired: true,
+    twoFactorRequiredOnFirstLogin: true,
+    twoFactorRequiredForNewDevice: true,
+    twoFactorRequiredForSensitiveActions: true,
+    trustedDeviceIds: user.trustedDeviceIds ?? [],
+    lastTwoFactorVerifiedAt: user.lastTwoFactorVerifiedAt ?? "",
+  };
+}
 
 const demoFreeUser: UserAccessProfile = {
   id: "demo-free-user",
@@ -89,6 +160,13 @@ const demoFreeUser: UserAccessProfile = {
 
   twoFactorEnabled: false,
   twoFactorRequired: false,
+
+  twoFactorRequiredOnFirstLogin: false,
+  twoFactorRequiredForNewDevice: false,
+  twoFactorRequiredForSensitiveActions: false,
+
+  trustedDeviceIds: [],
+  lastTwoFactorVerifiedAt: "",
 
   createdAt: now,
   updatedAt: now,
@@ -122,13 +200,32 @@ function getInitialUserAccessProfiles() {
       displayName: ownerAccessProfile.displayName,
       role: "global_admin",
       accountStatus: "active",
+
+      twoFactorEnabled: true,
       twoFactorRequired: true,
+      twoFactorRequiredOnFirstLogin: true,
+      twoFactorRequiredForNewDevice: true,
+      twoFactorRequiredForSensitiveActions: true,
+
+      trustedDeviceIds: storedOwner?.trustedDeviceIds ?? [],
+      lastTwoFactorVerifiedAt: storedOwner?.lastTwoFactorVerifiedAt ?? "",
+
       updatedAt: new Date().toISOString(),
     };
 
-    const otherProfiles = parsedProfiles.filter(
-      (user) => user.id !== ownerAccessProfile.id
-    );
+    const otherProfiles = parsedProfiles
+    .filter((user) => user.id !== ownerAccessProfile.id)
+    .map((user) => ({
+      ...user,
+      twoFactorRequiredOnFirstLogin:
+        user.twoFactorRequiredOnFirstLogin ?? false,
+      twoFactorRequiredForNewDevice:
+        user.twoFactorRequiredForNewDevice ?? false,
+      twoFactorRequiredForSensitiveActions:
+        user.twoFactorRequiredForSensitiveActions ?? false,
+      trustedDeviceIds: user.trustedDeviceIds ?? [],
+      lastTwoFactorVerifiedAt: user.lastTwoFactorVerifiedAt ?? "",
+    }));
 
     if (otherProfiles.length === 0) {
       return [lockedOwnerProfile, demoFreeUser];
@@ -163,16 +260,28 @@ export function UserAccessProvider({ children }: { children: ReactNode }) {
     userId: string,
     updates: Partial<UserAccessProfile>
   ) => {
+    if (isOwnerUser(userId) && hasProtectedOwnerUpdate(updates)) {
+      throw new Error(
+        "The Global Admin / Owner account is protected and cannot be changed."
+      );
+    }
+
     setUsers((prev) =>
-      prev.map((user) =>
-        user.id === userId
-          ? {
-              ...user,
-              ...updates,
-              updatedAt: new Date().toISOString(),
-            }
-          : user
-      )
+      prev.map((user) => {
+        if (user.id !== userId) return user;
+
+        const updatedUser = {
+          ...user,
+          ...updates,
+          updatedAt: new Date().toISOString(),
+        };
+
+        if (isOwnerUser(userId)) {
+          return lockOwnerProfile(updatedUser);
+        }
+
+        return updatedUser;
+      })
     );
   };
 
@@ -200,6 +309,10 @@ export function UserAccessProvider({ children }: { children: ReactNode }) {
       },
 
       setUserPlan: (userId, plan) => {
+        if (isOwnerUser(userId)) {
+          throw new Error("The Global Admin / Owner plan cannot be changed.");
+        }
+
         updateUserAccess(userId, {
           plan,
           subscriptionStatus: plan === "paid" ? "active" : "none",
@@ -209,6 +322,12 @@ export function UserAccessProvider({ children }: { children: ReactNode }) {
       grantManualFullAccess: (userId, reason = "") => {
         if (!canGrantManualAccess(currentUserAccess)) {
           throw new Error("You do not have permission to grant full access.");
+        }
+
+        if (isOwnerUser(userId)) {
+          throw new Error(
+            "The Global Admin / Owner already has protected full access."
+          );
         }
 
         updateUserAccess(userId, {
@@ -224,7 +343,7 @@ export function UserAccessProvider({ children }: { children: ReactNode }) {
           throw new Error("You do not have permission to remove full access.");
         }
 
-        if (userId === ownerAccessProfile.id) {
+        if (isOwnerUser(userId)) {
           throw new Error("Owner access cannot be removed.");
         }
 
