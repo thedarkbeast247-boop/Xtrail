@@ -125,3 +125,113 @@ export function getGarageAccess(
       !unlimited && currentVehicleCount >= FREE_PLAN_VEHICLE_LIMIT,
   };
 }
+
+export function getFeatureUpgradeContent(feature: FeatureKey) {
+  if (feature === "garage_unlimited_vehicles") {
+    return {
+      title: "Unlock unlimited Garage",
+      message:
+        "Free users can add up to 2 vehicles. Upgrade to add unlimited vehicles, setup tracking, and full garage insights.",
+      ctaLabel: "Upgrade Garage",
+    };
+  }
+
+  if (feature === "premium_trails") {
+    return {
+      title: "Unlock premium trails",
+      message:
+        "Free users can preview trails. Upgrade to view full premium trail details, route insights, and advanced trail information.",
+      ctaLabel: "Upgrade Trails",
+    };
+  }
+
+  if (feature === "offline_maps") {
+    return {
+      title: "Unlock offline maps",
+      message:
+        "Offline maps are a premium feature built for riders who need access when signal drops.",
+      ctaLabel: "Upgrade Maps",
+    };
+  }
+
+  if (feature === "advanced_analytics") {
+    return {
+      title: "Unlock advanced analytics",
+      message:
+        "Free users get basic ride tracking. Upgrade to see advanced progress charts, trends, riding history, and performance insights.",
+      ctaLabel: "Upgrade Analytics",
+    };
+  }
+
+  if (feature === "gpx_exports") {
+    return {
+      title: "Unlock GPX exports",
+      message:
+        "Upgrade to export your rides and trails for backup, sharing, and external GPS tools.",
+      ctaLabel: "Upgrade Exports",
+    };
+  }
+
+  if (feature === "saved_trails_unlimited") {
+    return {
+      title: "Unlock unlimited saved trails",
+      message:
+        "Free users can save a limited number of trails. Upgrade to build a full trail library.",
+      ctaLabel: "Upgrade Saved Trails",
+    };
+  }
+
+  if (feature === "ride_history_unlimited") {
+    return {
+      title: "Unlock full ride history",
+      message:
+        "Free users can view limited ride history. Upgrade to keep full access to all your rides and stats.",
+      ctaLabel: "Upgrade History",
+    };
+  }
+
+  if (feature === "completed_trails_unlimited") {
+    return {
+      title: "Unlock completed trail history",
+      message:
+        "Upgrade to keep a full record of completed trails and long-term progress.",
+      ctaLabel: "Upgrade Progress",
+    };
+  }
+
+  if (feature === "friends_groups") {
+    return {
+      title: "Unlock advanced groups",
+      message:
+        "Upgrade to create and manage advanced riding groups, shared rides, and community planning tools.",
+      ctaLabel: "Upgrade Groups",
+    };
+  }
+
+  if (feature === "admin_area") {
+    return {
+      title: "Admin access required",
+      message:
+        "Only the Global Admin / Owner and Admin users can access this area.",
+      ctaLabel: "Back to Profile",
+    };
+  }
+
+  return {
+    title: "Premium feature",
+    message:
+      "Upgrade to unlock this feature and get full access to XTrail.",
+    ctaLabel: "Upgrade",
+  };
+}
+
+export function getFeatureAccess(user: UserAccessProfile, feature: FeatureKey) {
+  const allowed = canAccessFeature(user, feature);
+  const upgradeContent = getFeatureUpgradeContent(feature);
+
+  return {
+    allowed,
+    accessLabel: getAccessLabel(user),
+    ...upgradeContent,
+  };
+}

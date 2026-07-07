@@ -20,8 +20,11 @@ import type {
 } from "../types/access";
 
 interface UserAccessContextValue {
+  currentUserId: string;
   currentUserAccess: UserAccessProfile;
   users: UserAccessProfile[];
+
+  switchCurrentUser: (userId: string) => void;
 
   updateCurrentUserAccess: (updates: Partial<UserAccessProfile>) => void;
   updateUserAccess: (
@@ -72,6 +75,8 @@ const ownerAccessProfile: UserAccessProfile = {
   createdAt: now,
   updatedAt: now,
 };
+
+
 
 const OWNER_USER_ID = ownerAccessProfile.id;
 
@@ -172,17 +177,131 @@ const demoFreeUser: UserAccessProfile = {
   updatedAt: now,
 };
 
+const demoPaidUser: UserAccessProfile = {
+  id: "demo-paid-user",
+  email: "paiduser@xtrail.app",
+  displayName: "Paid User",
+
+  role: "user",
+  plan: "paid",
+  subscriptionStatus: "active",
+  accountStatus: "active",
+
+  manualFullAccess: false,
+  manualFullAccessReason: "",
+
+  contributorStatus: "none",
+  contributorAccessActive: false,
+  contributorTrailsRequiredPerMonth: 3,
+  contributorTrailsSubmittedThisMonth: 0,
+  contributorTrailsApprovedThisMonth: 0,
+
+  trustLevel: 1,
+
+  twoFactorEnabled: false,
+  twoFactorRequired: false,
+
+  twoFactorRequiredOnFirstLogin: false,
+  twoFactorRequiredForNewDevice: false,
+  twoFactorRequiredForSensitiveActions: false,
+
+  trustedDeviceIds: [],
+  lastTwoFactorVerifiedAt: "",
+
+  createdAt: now,
+  updatedAt: now,
+};
+
+const demoContributorUser: UserAccessProfile = {
+  id: "demo-contributor-user",
+  email: "contributor@xtrail.app",
+  displayName: "Contributor User",
+
+  role: "contributor",
+  plan: "free",
+  subscriptionStatus: "none",
+  accountStatus: "active",
+
+  manualFullAccess: false,
+  manualFullAccessReason: "",
+
+  contributorStatus: "active",
+  contributorAccessActive: true,
+  contributorTrailsRequiredPerMonth: 3,
+  contributorTrailsSubmittedThisMonth: 3,
+  contributorTrailsApprovedThisMonth: 3,
+
+  trustLevel: 2,
+
+  twoFactorEnabled: false,
+  twoFactorRequired: false,
+
+  twoFactorRequiredOnFirstLogin: false,
+  twoFactorRequiredForNewDevice: false,
+  twoFactorRequiredForSensitiveActions: true,
+
+  trustedDeviceIds: [],
+  lastTwoFactorVerifiedAt: "",
+
+  createdAt: now,
+  updatedAt: now,
+};
+
+const demoAdminUser: UserAccessProfile = {
+  id: "demo-admin-user",
+  email: "admin@xtrail.app",
+  displayName: "Admin User",
+
+  role: "admin",
+  plan: "free",
+  subscriptionStatus: "none",
+  accountStatus: "active",
+
+  manualFullAccess: false,
+  manualFullAccessReason: "",
+
+  contributorStatus: "none",
+  contributorAccessActive: false,
+  contributorTrailsRequiredPerMonth: 3,
+  contributorTrailsSubmittedThisMonth: 0,
+  contributorTrailsApprovedThisMonth: 0,
+
+  trustLevel: 3,
+
+  twoFactorEnabled: true,
+  twoFactorRequired: true,
+
+  twoFactorRequiredOnFirstLogin: true,
+  twoFactorRequiredForNewDevice: true,
+  twoFactorRequiredForSensitiveActions: true,
+
+  trustedDeviceIds: [],
+  lastTwoFactorVerifiedAt: "",
+
+  createdAt: now,
+  updatedAt: now,
+};
+
+const defaultAccessProfiles = [
+  ownerAccessProfile,
+  demoFreeUser,
+  demoPaidUser,
+  demoContributorUser,
+  demoAdminUser,
+];
+
 const USER_ACCESS_STORAGE_KEY = "xtrail-user-access-profiles";
+const CURRENT_USER_STORAGE_KEY = "xtrail-current-user-id";
 
 function getInitialUserAccessProfiles() {
   if (typeof window === "undefined") {
-    return [ownerAccessProfile, demoFreeUser];
+    return defaultAccessProfiles;
   }
 
   const storedProfiles = window.localStorage.getItem(USER_ACCESS_STORAGE_KEY);
 
   if (!storedProfiles) {
-    return [ownerAccessProfile, demoFreeUser];
+    return defaultAccessProfiles;
   }
 
   try {
@@ -227,15 +346,31 @@ function getInitialUserAccessProfiles() {
       lastTwoFactorVerifiedAt: user.lastTwoFactorVerifiedAt ?? "",
     }));
 
-    if (otherProfiles.length === 0) {
-      return [lockedOwnerProfile, demoFreeUser];
-    }
+    const missingDefaultProfiles = defaultAccessProfiles.filter((defaultUser) => {
+      if (defaultUser.id === ownerAccessProfile.id) return false;
 
-    return [lockedOwnerProfile, ...otherProfiles];
+      return !otherProfiles.some((user) => user.id === defaultUser.id);
+    });
+
+    return [lockedOwnerProfile, ...otherProfiles, ...missingDefaultProfiles];
   } catch (error) {
     console.error("Failed to load user access profiles:", error);
-    return [ownerAccessProfile, demoFreeUser];
+    return defaultAccessProfiles;
   }
+}
+
+function getInitialCurrentUserId(users: UserAccessProfile[]) {
+  if (typeof window === "undefined") {
+    return ownerAccessProfile.id;
+  }
+
+  const storedUserId = window.localStorage.getItem(CURRENT_USER_STORAGE_KEY);
+
+  if (storedUserId && users.some((user) => user.id === storedUserId)) {
+    return storedUserId;
+  }
+
+  return ownerAccessProfile.id;
 }
 
 const UserAccessContext = createContext<UserAccessContextValue | undefined>(
@@ -247,11 +382,17 @@ export function UserAccessProvider({ children }: { children: ReactNode }) {
     getInitialUserAccessProfiles
   );
 
-  const [currentUserId] = useState(ownerAccessProfile.id);
+  const [currentUserId, setCurrentUserId] = useState(() =>
+    getInitialCurrentUserId(users)
+  );
 
   useEffect(() => {
     window.localStorage.setItem(USER_ACCESS_STORAGE_KEY, JSON.stringify(users));
   }, [users]);
+
+  useEffect(() => {
+    window.localStorage.setItem(CURRENT_USER_STORAGE_KEY, currentUserId);
+  }, [currentUserId]);
 
   const currentUserAccess =
     users.find((user) => user.id === currentUserId) ?? ownerAccessProfile;
@@ -287,8 +428,19 @@ export function UserAccessProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<UserAccessContextValue>(
     () => ({
+      currentUserId,
       currentUserAccess,
       users,
+
+      switchCurrentUser: (userId) => {
+        const userExists = users.some((user) => user.id === userId);
+
+        if (!userExists) {
+          throw new Error("User does not exist.");
+        }
+
+        setCurrentUserId(userId);
+      },
 
       updateCurrentUserAccess: (updates) => {
         updateUserAccess(currentUserAccess.id, updates);
@@ -355,7 +507,7 @@ export function UserAccessProvider({ children }: { children: ReactNode }) {
         });
       },
     }),
-    [currentUserAccess, users]
+    [currentUserId, currentUserAccess, users]
   );
 
   return (

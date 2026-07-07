@@ -19,6 +19,7 @@ import { GroupDetail } from './pages/GroupDetail';
 import { RiderDetail } from './pages/RiderDetail';
 import { GroupRideDetail } from './pages/GroupRideDetail';
 import { AdminUsers } from './pages/AdminUsers';
+import { DevAccessTester } from './pages/DevAccessTester';
 
 
 export const router = createBrowserRouter([
@@ -171,6 +172,14 @@ export const router = createBrowserRouter([
     Component: () => (
       <Layout>
         <AdminUsers />
+      </Layout>
+    ),
+  },
+  {
+    path: '/dev/access-tester',
+    Component: () => (
+      <Layout>
+        <DevAccessTester />
       </Layout>
     ),
   },
