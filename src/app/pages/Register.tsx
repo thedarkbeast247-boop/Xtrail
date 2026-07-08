@@ -19,8 +19,8 @@ export function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 px-5 py-8 text-white">
-      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col justify-center">
+    <div className="min-h-full bg-neutral-950 px-5 py-8 text-white">
+      <div className="mx-auto flex min-h-full max-w-md flex-col justify-center">
         <Link
           to="/login"
           className="mb-6 inline-flex items-center text-sm text-neutral-400 hover:text-white"

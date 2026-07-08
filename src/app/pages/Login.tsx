@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, Navigate } from "react-router";
+import { Link, Navigate, useLocation, useNavigate } from "react-router";
 import {
   Fingerprint,
   LockKeyhole,
@@ -18,11 +18,16 @@ export function Login() {
   const { isAuthenticated, signInWithEmail } = useUserAccess();
   const { showNotification } = useNotification();
 
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const from = (location.state as { from?: string } | null)?.from ?? "/";
+
   const [email, setEmail] = useState("rudie@xtrail.app");
   const [password, setPassword] = useState("password");
 
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={from} replace />;
   }
 
   const handleLogin = () => {
@@ -34,6 +39,8 @@ export function Login() {
         message: "Welcome back to XTrail.",
         variant: "success",
       });
+
+      navigate(from, { replace: true });
     } catch (error) {
       showNotification({
         title: "Login failed",
@@ -56,8 +63,8 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 px-5 py-8 text-white">
-      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col justify-center">
+    <div className="min-h-full bg-neutral-950 px-5 py-8 text-white">
+      <div className="mx-auto flex min-h-full max-w-md flex-col justify-center">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-red-500/10 text-red-500">
             <Mountain className="h-8 w-8" />
