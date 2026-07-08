@@ -1,6 +1,7 @@
 import type { FeatureKey, UserAccessProfile } from "../types/access";
 
 export const FREE_PLAN_VEHICLE_LIMIT = 2;
+export const FREE_PLAN_TRAIL_VIEW_LIMIT = 5;
 
 export function isActiveAccount(user: UserAccessProfile) {
   return user.accountStatus === "active";
@@ -126,7 +127,44 @@ export function getGarageAccess(
   };
 }
 
+export function getTrailDiscoveryAccess(
+  user: UserAccessProfile,
+  currentTrailCount: number
+) {
+  const unlimited = canAccessFeature(user, "trail_discovery_unlimited");
+
+  const visibleLimit = unlimited
+    ? currentTrailCount
+    : FREE_PLAN_TRAIL_VIEW_LIMIT;
+
+  return {
+    unlimited,
+    accessLabel: getAccessLabel(user),
+    visibleLimit,
+    trailViewLimitLabel: unlimited
+      ? "Unlimited"
+      : `${Math.min(
+          currentTrailCount,
+          FREE_PLAN_TRAIL_VIEW_LIMIT
+        )}/${FREE_PLAN_TRAIL_VIEW_LIMIT}`,
+    hiddenCount: unlimited
+      ? 0
+      : Math.max(0, currentTrailCount - FREE_PLAN_TRAIL_VIEW_LIMIT),
+    isLimitReached:
+      !unlimited && currentTrailCount >= FREE_PLAN_TRAIL_VIEW_LIMIT,
+  };
+}
+
 export function getFeatureUpgradeContent(feature: FeatureKey) {
+  if (feature === "trail_discovery_unlimited") {
+    return {
+      title: "Unlock more trails in your area",
+      message:
+        "Free users can view up to 5 trails in their selected area. Upgrade to see unlimited trails, premium routes, and advanced trail details.",
+      ctaLabel: "Upgrade Trails",
+    };
+  }
+
   if (feature === "garage_unlimited_vehicles") {
     return {
       title: "Unlock unlimited Garage",

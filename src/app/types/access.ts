@@ -32,7 +32,8 @@ export type FeatureKey =
   | "admin_area"
   | "user_management"
   | "trail_review"
-  | "manual_access_management";
+  | "manual_access_management"
+  | "trail_discovery_unlimited";
 
 export interface UserAccessProfile {
   id: string;

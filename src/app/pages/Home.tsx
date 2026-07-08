@@ -7,6 +7,12 @@ import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { ElevationProfile } from '../components/ElevationProfile';
 import TrailCard from "../components/TrailCard";
+import { LockedFeatureCard } from "../components/access/LockedFeatureCard";
+import { useUserAccess } from "../context/UserAccessContext";
+import {
+  FREE_PLAN_TRAIL_VIEW_LIMIT,
+  getTrailDiscoveryAccess,
+} from "../lib/accessControl";
 import { useVehicles } from "../context/VehicleContext";
 import { type SavedRide } from "../utils/rideStats";
 import { type CompletedTrail } from "../types/completedTrail";
@@ -27,6 +33,7 @@ type DiscoveryArea = (typeof discoveryAreas)[number];
 export function Home() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { activeVehicle } = useVehicles();
+  const { currentUserAccess } = useUserAccess();
   const [selectedVehicleClass, setSelectedVehicleClass] = useState<VehicleClass | 'All'>('All');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('All');
   const [selectedTrailType, setSelectedTrailType] = useState<TrailType | 'All'>('All');
@@ -429,7 +436,16 @@ export function Home() {
     setZoomLevel((prev) => Math.min(prev + 0.5, 5));
   };
 
-  const visibleTrails = displayedTrails;
+  const trailDiscoveryAccess = getTrailDiscoveryAccess(
+    currentUserAccess,
+    displayedTrails.length
+  );
+
+  const visibleTrails = trailDiscoveryAccess.unlimited
+    ? displayedTrails
+    : displayedTrails.slice(0, trailDiscoveryAccess.visibleLimit);
+
+  const hiddenTrailCount = trailDiscoveryAccess.hiddenCount;
 
   const handleZoomOut = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -703,7 +719,7 @@ export function Home() {
                   <stop offset="100%" stopColor="#fbbf24" stopOpacity="0"/>
                 </radialGradient>
               </defs>
-              {mockTrails.map((trail) => {
+              {visibleTrails.map((trail) => {
                 const pos = getMarkerPosition(trail.lat, trail.lng);
                 const size = (trail.popularity || 5) * 5;
                 return (
@@ -739,7 +755,7 @@ export function Home() {
                 </feMerge>
               </filter>
             </defs>
-            {filteredTrails.map((trail) => (
+            {visibleTrails.map((trail) => (
               <g key={`route-${trail.id}`} filter="url(#trail-shadow)">
                 {/* Trail Path outer white border (thicker) */}
                 <path
@@ -964,7 +980,11 @@ export function Home() {
             </Badge>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-neutral-900 font-medium">{visibleTrails.length} trails</span>
+            <span className="text-xs text-neutral-900 font-medium">
+              {trailDiscoveryAccess.unlimited
+                ? `${visibleTrails.length} trails`
+                : `${visibleTrails.length}/${FREE_PLAN_TRAIL_VIEW_LIMIT} trails`}
+            </span>
             <div className="w-px h-4 bg-neutral-300"></div>
             <span className="text-xs text-neutral-600">Zoom {zoomLevel.toFixed(1)}x</span>
           </div>
@@ -1322,12 +1342,22 @@ export function Home() {
           <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-4 mb-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-white text-lg font-semibold">{visibleTrails.length} Trails Found</p>
+                <p className="text-white text-lg font-semibold">
+                  {trailDiscoveryAccess.unlimited
+                    ? `${visibleTrails.length} Trails Found`
+                    : `${visibleTrails.length} of ${displayedTrails.length} Trails Available`}
+                </p>
                 <p className="text-neutral-400 text-sm">
                   {activeFilter === "saved" && "Saved trails ready to revisit"}
                   {activeFilter === "completed" && "Completed trails from your progress"}
                   {activeFilter === "all" && "Public trails ready to explore"}
                 </p>
+
+                {!trailDiscoveryAccess.unlimited && displayedTrails.length > 0 && (
+                  <p className="mt-1 text-xs text-orange-400">
+                    Free users can view up to {FREE_PLAN_TRAIL_VIEW_LIMIT} trails in this area.
+                  </p>
+                )}
               </div>
 
               {(activeFilter !== "all" ||
@@ -1465,6 +1495,21 @@ export function Home() {
                   />
                 </div>
               ))}
+            </div>
+          )}
+
+          {hiddenTrailCount > 0 && (
+            <div className="mb-4">
+              <LockedFeatureCard
+                compact
+                title="Unlock more trails in this area"
+                message={`There ${
+                  hiddenTrailCount === 1 ? "is" : "are"
+                } ${hiddenTrailCount} more trail${
+                  hiddenTrailCount === 1 ? "" : "s"
+                } hidden on the free plan. Upgrade to view unlimited trails in your selected area.`}
+                ctaLabel="Upgrade Trails"
+              />
             </div>
           )}
 
