@@ -32,10 +32,12 @@ import { type CompletedTrail } from "../types/completedTrail";
 import { type SavedTrail } from "../types/savedTrail";
 import { useUserAccess } from "../context/UserAccessContext";
 import { canAccessAdminArea } from "../lib/accessControl";
+import { useNotification } from "../context/NotificationContext";
 
 
 export function Profile() {
-  const { currentUserAccess } = useUserAccess();
+  const { currentUserAccess, signOut } = useUserAccess();
+  const { showNotification } = useNotification();
   const canOpenAdminArea = canAccessAdminArea(currentUserAccess);
 
   const { vehicles, activeVehicle, setActiveVehicleId } = useVehicles();
@@ -836,10 +838,20 @@ export function Profile() {
           </Button>
 
           <Button
+            type="button"
             variant="outline"
-            className="w-full justify-start border-red-800 text-red-500 hover:bg-red-950 h-11"
+            onClick={() => {
+              signOut();
+
+              showNotification({
+                title: "Signed out",
+                message: "You have been signed out of XTrail.",
+                variant: "info",
+              });
+            }}
+            className="w-full border-neutral-700 text-neutral-300 hover:bg-neutral-800"
           >
-            <LogOut className="w-4 h-4 mr-3" />
+            <LogOut className="w-4 h-4 mr-2" />
             Sign Out
           </Button>
         </div>

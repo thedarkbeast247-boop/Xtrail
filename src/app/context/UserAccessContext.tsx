@@ -26,6 +26,10 @@ interface UserAccessContextValue {
 
   switchCurrentUser: (userId: string) => void;
 
+  isAuthenticated: boolean;
+  signInWithEmail: (email: string, password: string) => void;
+  signOut: () => void;
+
   updateCurrentUserAccess: (updates: Partial<UserAccessProfile>) => void;
   updateUserAccess: (
     userId: string,
@@ -292,6 +296,7 @@ const defaultAccessProfiles = [
 
 const USER_ACCESS_STORAGE_KEY = "xtrail-user-access-profiles";
 const CURRENT_USER_STORAGE_KEY = "xtrail-current-user-id";
+const AUTH_STORAGE_KEY = "xtrail-authenticated";
 
 function getInitialUserAccessProfiles() {
   if (typeof window === "undefined") {
@@ -386,6 +391,12 @@ export function UserAccessProvider({ children }: { children: ReactNode }) {
     getInitialCurrentUserId(users)
   );
 
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    if (typeof window === "undefined") return true;
+
+    return window.localStorage.getItem(AUTH_STORAGE_KEY) !== "false";
+  });
+
   useEffect(() => {
     window.localStorage.setItem(USER_ACCESS_STORAGE_KEY, JSON.stringify(users));
   }, [users]);
@@ -393,6 +404,13 @@ export function UserAccessProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     window.localStorage.setItem(CURRENT_USER_STORAGE_KEY, currentUserId);
   }, [currentUserId]);
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      AUTH_STORAGE_KEY,
+      isAuthenticated ? "true" : "false"
+    );
+  }, [isAuthenticated]);
 
   const currentUserAccess =
     users.find((user) => user.id === currentUserId) ?? ownerAccessProfile;
@@ -440,6 +458,37 @@ export function UserAccessProvider({ children }: { children: ReactNode }) {
         }
 
         setCurrentUserId(userId);
+      },
+
+      isAuthenticated,
+
+      signInWithEmail: (email, password) => {
+        if (!email.trim()) {
+          throw new Error("Email is required.");
+        }
+
+        if (!password.trim()) {
+          throw new Error("Password is required.");
+        }
+
+        const matchedUser = users.find(
+          (user) => user.email.toLowerCase() === email.trim().toLowerCase()
+        );
+
+        if (!matchedUser) {
+          throw new Error("No user found with that email.");
+        }
+
+        if (matchedUser.accountStatus !== "active") {
+          throw new Error("This account is not active.");
+        }
+
+        setCurrentUserId(matchedUser.id);
+        setIsAuthenticated(true);
+      },
+
+      signOut: () => {
+        setIsAuthenticated(false);
       },
 
       updateCurrentUserAccess: (updates) => {
@@ -507,7 +556,7 @@ export function UserAccessProvider({ children }: { children: ReactNode }) {
         });
       },
     }),
-    [currentUserId, currentUserAccess, users]
+    [currentUserId, currentUserAccess, users, isAuthenticated]
   );
 
   return (

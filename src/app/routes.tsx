@@ -20,9 +20,24 @@ import { RiderDetail } from './pages/RiderDetail';
 import { GroupRideDetail } from './pages/GroupRideDetail';
 import { AdminUsers } from './pages/AdminUsers';
 import { DevAccessTester } from './pages/DevAccessTester';
+import { Login } from './pages/Login';
+import { Register } from './pages/Register';
+import { ForgotPassword } from './pages/ForgotPassword';
 
 
 export const router = createBrowserRouter([
+  {
+    path: '/login',
+    Component: Login,
+  },
+  {
+    path: '/register',
+    Component: Register,
+  },
+  {
+    path: '/forgot-password',
+    Component: ForgotPassword,
+  },
   {
     path: '/',
     Component: () => (
