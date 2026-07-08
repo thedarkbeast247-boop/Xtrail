@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   ShieldCheck,
   Bug,
+  Database,
 } from "lucide-react";
 import { Link } from "react-router";
 import { Button } from "../components/ui/button";
@@ -303,6 +304,17 @@ export function Profile() {
                     <Bug className="w-5 h-5 text-orange-500" />
                   </div>
                   <div className="text-white text-xs text-center">Dev Access</div>
+                </div>
+              </Link>
+            )}
+            {import.meta.env.DEV && (
+              <Link to="/dev/data-transfer">
+                <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-3 min-h-[108px] flex flex-col items-center justify-center
+                  transition-all duration-200 hover:border-neutral-700 hover:bg-neutral-800/60 active:scale-95">
+                  <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center mx-auto mb-2">
+                    <Database className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div className="text-white text-xs text-center">Data Transfer</div>
                 </div>
               </Link>
             )}

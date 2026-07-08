@@ -24,6 +24,7 @@ import { RiderDetail } from "./pages/RiderDetail";
 import { GroupRideDetail } from "./pages/GroupRideDetail";
 import { AdminUsers } from "./pages/AdminUsers";
 import { DevAccessTester } from "./pages/DevAccessTester";
+import { DevDataTransfer } from "./pages/DevDataTransfer";
 
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
@@ -133,5 +134,9 @@ export const router = createBrowserRouter([
   {
     path: "/dev/access-tester",
     Component: () => protectedPage(<DevAccessTester />),
+  },
+  {
+    path: "/dev/data-transfer",
+    Component: () => protectedPage(<DevDataTransfer />),
   },
 ]);

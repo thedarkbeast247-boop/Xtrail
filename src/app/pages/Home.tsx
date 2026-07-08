@@ -670,7 +670,7 @@ export function Home() {
   return (
     <div className="relative min-h-screen bg-neutral-950 flex flex-col">
       {/* Map Section */}
-      <div className="relative h-[55vh] bg-neutral-900 overflow-hidden touch-none">
+      <div className="relative h-[55vh] bg-neutral-900 overflow-hidden touch-pan-y">
         {/* Map Container with Pan & Zoom */}
         <div 
           ref={mapRef}
