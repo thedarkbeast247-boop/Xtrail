@@ -1,5 +1,9 @@
+import type { ReactNode } from 'react';
 import { createBrowserRouter } from 'react-router';
+
 import { Layout } from './components/Layout';
+import { RequireAuth } from './components/auth/RequireAuth';
+
 import { Home } from './pages/Home';
 import { TrailDetail } from './pages/TrailDetail';
 import { RecordRide } from './pages/RecordRide';
@@ -20,10 +24,18 @@ import { RiderDetail } from './pages/RiderDetail';
 import { GroupRideDetail } from './pages/GroupRideDetail';
 import { AdminUsers } from './pages/AdminUsers';
 import { DevAccessTester } from './pages/DevAccessTester';
+
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { ForgotPassword } from './pages/ForgotPassword';
 
+function protectedPage(page: ReactNode) {
+  return (
+    <RequireAuth>
+      <Layout>{page}</Layout>
+    </RequireAuth>
+  );
+}
 
 export const router = createBrowserRouter([
   {
@@ -40,162 +52,82 @@ export const router = createBrowserRouter([
   },
   {
     path: '/',
-    Component: () => (
-      <Layout>
-        <Home />
-      </Layout>
-    ),
+    Component: () => protectedPage(<Home />),
   },
   {
     path: '/trail/:id',
-    Component: () => (
-      <Layout>
-        <TrailDetail />
-      </Layout>
-    ),
+    Component: () => protectedPage(<TrailDetail />),
   },
   {
     path: '/record',
-    Component: () => (
-      <Layout>
-        <RecordRide />
-      </Layout>
-    ),
+    Component: () => protectedPage(<RecordRide />),
   },
   {
     path: '/subscription',
-    Component: () => (
-      <Layout>
-        <Subscription />
-      </Layout>
-    ),
+    Component: () => protectedPage(<Subscription />),
   },
   {
     path: '/profile',
-    Component: () => (
-      <Layout>
-        <Profile />
-      </Layout>
-    ),
+    Component: () => protectedPage(<Profile />),
   },
   {
     path: '/service-log',
-    Component: () => (
-      <Layout>
-        <ServiceLog />
-      </Layout>
-    ),
+    Component: () => protectedPage(<ServiceLog />),
   },
   {
     path: '/friends',
-    Component: () => (
-      <Layout>
-        <Friends />
-      </Layout>
-    ),
+    Component: () => protectedPage(<Friends />),
   },
   {
-  path: '/friends/riders/:riderId',
-    Component: () => (
-      <Layout>
-        <RiderDetail />
-      </Layout>
-    ),
+    path: '/friends/riders/:riderId',
+    Component: () => protectedPage(<RiderDetail />),
   },
   {
-  path: '/friends/groups/:groupId',
-    Component: () => (
-      <Layout>
-        <GroupDetail />
-      </Layout>
-    ),
+    path: '/friends/groups/:groupId',
+    Component: () => protectedPage(<GroupDetail />),
   },
   {
-  path: '/friends/groups/:groupId/rides/:rideId',
-    Component: () => (
-      <Layout>
-        <GroupRideDetail />
-      </Layout>
-    ),
+    path: '/friends/groups/:groupId/rides/:rideId',
+    Component: () => protectedPage(<GroupRideDetail />),
   },
   {
     path: '/progress',
-    Component: () => (
-      <Layout>
-        <ProgressDashboard />
-      </Layout>
-    ),
+    Component: () => protectedPage(<ProgressDashboard />),
   },
   {
     path: '/achievements',
-    Component: () => (
-      <Layout>
-        <Achievements />
-      </Layout>
-    ),
+    Component: () => protectedPage(<Achievements />),
   },
   {
     path: '/garage',
-    Component: () => (
-      <Layout>
-        <Garage />
-      </Layout>
-    ),
+    Component: () => protectedPage(<Garage />),
   },
   {
     path: '/garage/:vehicleId',
-    Component: () => (
-      <Layout>
-        <VehicleDetail />
-      </Layout>
-    ),
+    Component: () => protectedPage(<VehicleDetail />),
   },
   {
     path: '/ride-history',
-    Component: () => (
-      <Layout>
-        <RideHistory />
-      </Layout>
-    ),
+    Component: () => protectedPage(<RideHistory />),
   },
   {
     path: '/ride-history/:rideId',
-    Component: () => (
-      <Layout>
-        <RideDetail />
-      </Layout>
-    ),
+    Component: () => protectedPage(<RideDetail />),
   },
   {
     path: '/saved-trails',
-    Component: () => (
-      <Layout>
-        <SavedTrails />
-      </Layout>
-    ),
+    Component: () => protectedPage(<SavedTrails />),
   },
   {
     path: '/completed-trails',
-    Component: () => (
-      <Layout>
-        <CompletedTrails />
-      </Layout>
-    ),
+    Component: () => protectedPage(<CompletedTrails />),
   },
   {
     path: '/admin/users',
-    Component: () => (
-      <Layout>
-        <AdminUsers />
-      </Layout>
-    ),
+    Component: () => protectedPage(<AdminUsers />),
   },
   {
     path: '/dev/access-tester',
-    Component: () => (
-      <Layout>
-        <DevAccessTester />
-      </Layout>
-    ),
+    Component: () => protectedPage(<DevAccessTester />),
   },
 ]);
