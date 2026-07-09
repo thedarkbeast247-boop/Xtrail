@@ -1,11 +1,30 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
-import { ArrowLeft, Clock, Map, Route } from "lucide-react";
+import {
+  ArrowLeft,
+  Clock,
+  LockKeyhole,
+  Map,
+  Route,
+} from "lucide-react";
+
+import { LockedFeatureCard } from "../components/access/LockedFeatureCard";
 import { Button } from "../components/ui/button";
-import { formatRideDuration, getRideStats, type SavedRide } from "../utils/rideStats";
+import { useUserAccess } from "../context/UserAccessContext";
+import {
+  FREE_PLAN_RIDE_HISTORY_LIMIT,
+  getRideHistoryAccess,
+} from "../lib/accessControl";
+import {
+  formatRideDuration,
+  getRideStats,
+  type SavedRide,
+} from "../utils/rideStats";
 
 export function RideHistory() {
   const [savedRides, setSavedRides] = useState<SavedRide[]>([]);
+
+  const { currentUserAccess } = useUserAccess();
 
   useEffect(() => {
     const storedRides = localStorage.getItem("xtrail-saved-rides");
@@ -17,10 +36,12 @@ export function RideHistory() {
 
     try {
       const parsed = JSON.parse(storedRides) as SavedRide[];
+
       parsed.sort(
         (a, b) =>
           new Date(b.finishedAt).getTime() - new Date(a.finishedAt).getTime()
       );
+
       setSavedRides(parsed);
     } catch (error) {
       console.error("Failed to load saved rides:", error);
@@ -28,10 +49,21 @@ export function RideHistory() {
     }
   }, []);
 
-  const rideStats = useMemo(() => getRideStats(savedRides), [savedRides]);
+  const rideHistoryAccess = getRideHistoryAccess(
+    currentUserAccess,
+    savedRides.length
+  );
+
+  const visibleRides = rideHistoryAccess.unlimited
+    ? savedRides
+    : savedRides.slice(0, rideHistoryAccess.visibleLimit);
+
+  const hiddenRideCount = rideHistoryAccess.hiddenCount;
+
+  const rideStats = useMemo(() => getRideStats(visibleRides), [visibleRides]);
 
   const formatRideDate = (isoDate: string) => {
-    return new Date(isoDate).toLocaleDateString("en-US", {
+    return new Date(isoDate).toLocaleDateString("en-ZA", {
       month: "short",
       day: "numeric",
       year: "numeric",
@@ -67,7 +99,7 @@ export function RideHistory() {
           <div>
             <h1 className="text-xl font-semibold text-white">Ride History</h1>
             <p className="text-sm text-neutral-400">
-              View all your saved Xtrail rides.
+              View your saved XTrail rides.
             </p>
           </div>
         </div>
@@ -76,9 +108,13 @@ export function RideHistory() {
       <div className="space-y-6 px-4 py-5">
         {savedRides.length === 0 ? (
           <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5 text-center">
-            <h2 className="text-base font-medium text-white">No rides saved yet</h2>
+            <h2 className="text-base font-medium text-white">
+              No rides saved yet
+            </h2>
+
             <p className="mt-2 text-sm text-neutral-400">
-              Start a trail, complete your ride, and save it to build your ride history.
+              Start a trail, complete your ride, and save it to build your ride
+              history.
             </p>
 
             <Link to="/" className="mt-4 inline-block">
@@ -89,23 +125,66 @@ export function RideHistory() {
           </div>
         ) : (
           <>
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs text-neutral-500">
+                    Ride history access
+                  </p>
+
+                  <p className="mt-1 text-lg font-bold text-white">
+                    {rideHistoryAccess.rideHistoryLimitLabel}
+                  </p>
+
+                  <p className="mt-1 text-xs text-neutral-400">
+                    {rideHistoryAccess.unlimited
+                      ? "Unlimited ride history"
+                      : "Free plan"}
+                  </p>
+                </div>
+
+                <div
+                  className={`flex h-11 w-11 items-center justify-center rounded-xl ${
+                    rideHistoryAccess.unlimited
+                      ? "bg-emerald-500/10 text-emerald-400"
+                      : "bg-orange-500/10 text-orange-400"
+                  }`}
+                >
+                  <LockKeyhole className="h-5 w-5" />
+                </div>
+              </div>
+
+              {!rideHistoryAccess.unlimited && (
+                <div className="mt-3 rounded-xl border border-orange-500/20 bg-orange-500/10 px-3 py-2">
+                  <p className="text-xs font-semibold text-orange-400">
+                    Free ride history limit
+                  </p>
+
+                  <p className="mt-1 text-xs text-neutral-400">
+                    Free users can view up to {FREE_PLAN_RIDE_HISTORY_LIMIT}{" "}
+                    recent rides. Subscribe to unlock your full ride history.
+                  </p>
+                </div>
+              )}
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
-                <p className="text-xs text-neutral-400">Total rides</p>
+                <p className="text-xs text-neutral-400">Visible rides</p>
                 <p className="mt-2 text-xl font-semibold text-white">
                   {rideStats.totalRides}
                 </p>
               </div>
 
               <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
-                <p className="text-xs text-neutral-400">Total distance</p>
+                <p className="text-xs text-neutral-400">Visible distance</p>
                 <p className="mt-2 text-xl font-semibold text-white">
                   {rideStats.totalDistanceKm.toFixed(1)} km
                 </p>
               </div>
 
               <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
-                <p className="text-xs text-neutral-400">Total ride time</p>
+                <p className="text-xs text-neutral-400">Visible ride time</p>
                 <p className="mt-2 text-xl font-semibold text-white">
                   {formatRideDuration(rideStats.totalDurationSeconds)}
                 </p>
@@ -120,7 +199,7 @@ export function RideHistory() {
             </div>
 
             <div className="space-y-3">
-              {savedRides.map((ride) => (
+              {visibleRides.map((ride) => (
                 <Link
                   key={ride.id}
                   to={`/ride-history/${ride.id}`}
@@ -147,6 +226,7 @@ export function RideHistory() {
                           <h2 className="truncate text-base font-semibold text-white">
                             {ride.trailName}
                           </h2>
+
                           <p className="mt-1 text-xs text-neutral-400">
                             {formatRideDate(ride.finishedAt)}
                           </p>
@@ -172,6 +252,7 @@ export function RideHistory() {
                         <Clock className="h-3.5 w-3.5" />
                         <span>Time</span>
                       </div>
+
                       <p className="mt-2 font-semibold text-white">
                         {formatRideTime(ride.durationSeconds)}
                       </p>
@@ -182,6 +263,7 @@ export function RideHistory() {
                         <Route className="h-3.5 w-3.5" />
                         <span>Distance</span>
                       </div>
+
                       <p className="mt-2 font-semibold text-white">
                         {ride.distanceKm.toFixed(2)} km
                       </p>
@@ -192,6 +274,7 @@ export function RideHistory() {
                         <Map className="h-3.5 w-3.5" />
                         <span>Avg Speed</span>
                       </div>
+
                       <p className="mt-2 font-semibold text-white">
                         {ride.avgSpeedKmh.toFixed(1)} km/h
                       </p>
@@ -199,6 +282,17 @@ export function RideHistory() {
                   </div>
                 </Link>
               ))}
+
+              {hiddenRideCount > 0 && (
+                <LockedFeatureCard
+                  compact
+                  title="Subscribe to view unlimited ride history"
+                  message={`You have ${hiddenRideCount} more ride${
+                    hiddenRideCount === 1 ? "" : "s"
+                  } waiting in your history. Subscribe to unlock unlimited ride history and long-term stats.`}
+                  ctaLabel="Subscribe Now"
+                />
+              )}
             </div>
           </>
         )}

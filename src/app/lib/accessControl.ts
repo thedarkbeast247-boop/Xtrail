@@ -2,6 +2,8 @@ import type { FeatureKey, UserAccessProfile } from "../types/access";
 
 export const FREE_PLAN_VEHICLE_LIMIT = 2;
 export const FREE_PLAN_TRAIL_VIEW_LIMIT = 5;
+export const FREE_PLAN_SAVED_TRAILS_LIMIT = 5;
+export const FREE_PLAN_RIDE_HISTORY_LIMIT = 5;
 
 export function isActiveAccount(user: UserAccessProfile) {
   return user.accountStatus === "active";
@@ -155,6 +157,60 @@ export function getTrailDiscoveryAccess(
   };
 }
 
+export function getSavedTrailsAccess(
+  user: UserAccessProfile,
+  currentSavedTrailCount: number
+) {
+  const unlimited = canAccessFeature(user, "saved_trails_unlimited");
+
+  const visibleLimit = unlimited
+    ? currentSavedTrailCount
+    : FREE_PLAN_SAVED_TRAILS_LIMIT;
+
+  return {
+    unlimited,
+    visibleLimit,
+    savedTrailLimitLabel: unlimited
+      ? "Unlimited"
+      : `${Math.min(
+          currentSavedTrailCount,
+          FREE_PLAN_SAVED_TRAILS_LIMIT
+        )}/${FREE_PLAN_SAVED_TRAILS_LIMIT}`,
+    hiddenCount: unlimited
+      ? 0
+      : Math.max(0, currentSavedTrailCount - FREE_PLAN_SAVED_TRAILS_LIMIT),
+    isLimitReached:
+      !unlimited && currentSavedTrailCount >= FREE_PLAN_SAVED_TRAILS_LIMIT,
+  };
+}
+
+export function getRideHistoryAccess(
+  user: UserAccessProfile,
+  currentRideCount: number
+) {
+  const unlimited = canAccessFeature(user, "ride_history_unlimited");
+
+  const visibleLimit = unlimited
+    ? currentRideCount
+    : FREE_PLAN_RIDE_HISTORY_LIMIT;
+
+  return {
+    unlimited,
+    visibleLimit,
+    rideHistoryLimitLabel: unlimited
+      ? "Unlimited"
+      : `${Math.min(
+          currentRideCount,
+          FREE_PLAN_RIDE_HISTORY_LIMIT
+        )}/${FREE_PLAN_RIDE_HISTORY_LIMIT}`,
+    hiddenCount: unlimited
+      ? 0
+      : Math.max(0, currentRideCount - FREE_PLAN_RIDE_HISTORY_LIMIT),
+    isLimitReached:
+      !unlimited && currentRideCount >= FREE_PLAN_RIDE_HISTORY_LIMIT,
+  };
+}
+
 export function getFeatureUpgradeContent(feature: FeatureKey) {
   if (feature === "trail_discovery_unlimited") {
     return {
@@ -212,21 +268,21 @@ export function getFeatureUpgradeContent(feature: FeatureKey) {
 
   if (feature === "saved_trails_unlimited") {
     return {
-      title: "Unlock unlimited saved trails",
+      title: "Subscribe to view unlimited saved trails",
       message:
-        "Free users can save a limited number of trails. Upgrade to build a full trail library.",
-      ctaLabel: "Upgrade Saved Trails",
+        "Free users can view up to 5 saved trails. Subscribe to unlock your full saved trail library.",
+      ctaLabel: "Subscribe Now",
     };
   }
 
   if (feature === "ride_history_unlimited") {
-    return {
-      title: "Unlock full ride history",
-      message:
-        "Free users can view limited ride history. Upgrade to keep full access to all your rides and stats.",
-      ctaLabel: "Upgrade History",
-    };
-  }
+  return {
+    title: "Subscribe to view unlimited ride history",
+    message:
+      "Free users can view up to 5 recent rides. Subscribe to unlock your full ride history and long-term stats.",
+    ctaLabel: "Subscribe Now",
+  };
+}
 
   if (feature === "completed_trails_unlimited") {
     return {

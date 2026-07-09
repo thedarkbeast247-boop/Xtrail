@@ -13,7 +13,7 @@ interface LockedFeatureCardProps {
 export function LockedFeatureCard({
   title,
   message,
-  ctaLabel = "Upgrade",
+  ctaLabel = "Subscribe",
   compact = false,
 }: LockedFeatureCardProps) {
   return (
