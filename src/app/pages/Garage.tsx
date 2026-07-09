@@ -40,6 +40,11 @@ import {
 import { useVehicles } from "../context/VehicleContext";
 import type { Vehicle, VehicleType } from "../types/vehicle";
 import { useNotification } from "../context/NotificationContext";
+import { useUserAccess } from "../context/UserAccessContext";
+import {
+  FREE_PLAN_VEHICLE_LIMIT,
+  getGarageAccess,
+} from "../lib/accessControl";
 
 const vehicleTypeOptions: { label: string; value: VehicleType }[] = [
   { label: "Dirt Bike", value: "dirt-bike" },
@@ -58,12 +63,6 @@ const colorOptions = [
   { name: "Orange", value: "#f97316" },
   { name: "Yellow", value: "#eab308" },
 ];
-
-const FREE_PLAN_VEHICLE_LIMIT = 2;
-
-// Temporary placeholder until the real subscription system is connected.
-// Change this to "paid" when testing unlimited garage access.
-const CURRENT_GARAGE_PLAN = "free" as "free" | "paid";
 
 const hourBasedVehicleTypes: VehicleType[] = [
   "dirt-bike",
@@ -180,6 +179,7 @@ function getVehicleInitials(name: string) {
 
 export function Garage() {
   const { showNotification } = useNotification();
+  const { currentUserAccess } = useUserAccess();
   const {
   vehicles,
   activeVehicleId,
@@ -242,14 +242,11 @@ export function Garage() {
     bannerImage: "",
   });
 
-  const isPaidGaragePlan = CURRENT_GARAGE_PLAN === "paid";
+  const garageAccess = getGarageAccess(currentUserAccess, vehicles.length);
 
-  const isVehicleLimitReached =
-    !isPaidGaragePlan && vehicles.length >= FREE_PLAN_VEHICLE_LIMIT;
+  const isVehicleLimitReached = garageAccess.isVehicleLimitReached;
 
-  const garageVehicleLimitLabel = isPaidGaragePlan
-    ? "Unlimited"
-    : `${vehicles.length}/${FREE_PLAN_VEHICLE_LIMIT}`;
+  const garageVehicleLimitLabel = garageAccess.vehicleLimitLabel;
 
   const newVehicleUsesHours = vehicleUsesEngineHours(newVehicle.type);
   const editVehicleUsesHours = vehicleUsesEngineHours(editVehicle.type);
@@ -411,7 +408,7 @@ export function Garage() {
     if (isVehicleLimitReached) {
       showNotification({
         title: "Vehicle limit reached",
-        message: `The free plan allows up to ${FREE_PLAN_VEHICLE_LIMIT} vehicles. Upgrade to add unlimited vehicles.`,
+        message: `The free plan allows up to ${FREE_PLAN_VEHICLE_LIMIT} vehicles. Subscribe to the Pro Plan to add unlimited vehicles.`,
         variant: "warning",
       });
 
@@ -533,7 +530,7 @@ export function Garage() {
     if (isVehicleLimitReached) {
       showNotification({
         title: "Vehicle limit reached",
-        message: `The free plan allows up to ${FREE_PLAN_VEHICLE_LIMIT} vehicles. Upgrade to add unlimited vehicles.`,
+        message: `The free plan allows up to ${FREE_PLAN_VEHICLE_LIMIT} vehicles. Subscribe to the Pro Plan to add unlimited vehicles.`,
         variant: "warning",
       });
 
@@ -681,7 +678,7 @@ export function Garage() {
 
                     showNotification({
                       title: "Vehicle limit reached",
-                      message: `The free plan allows up to ${FREE_PLAN_VEHICLE_LIMIT} vehicles. Upgrade to add unlimited vehicles.`,
+                      message: `The free plan allows up to ${FREE_PLAN_VEHICLE_LIMIT} vehicles. Subscribe to the Pro Plan to add unlimited vehicles.`,
                       variant: "warning",
                     });
                   }
@@ -1027,7 +1024,7 @@ export function Garage() {
                     Free garage limit reached
                   </p>
                   <p className="mt-1 text-xs text-neutral-400">
-                    Upgrade later to add unlimited vehicles.
+                    Subscribe to add unlimited vehicles.
                   </p>
                 </div>
               )}
@@ -1558,7 +1555,7 @@ export function Garage() {
               Free vehicle limit reached
             </p>
             <p className="mt-1 text-xs text-neutral-400">
-              You have reached the current {FREE_PLAN_VEHICLE_LIMIT}-vehicle free garage limit.
+              You have reached the {FREE_PLAN_VEHICLE_LIMIT}-vehicle free garage limit. Subscribe to the Pro Plan to add unlimited vehicles.
             </p>
           </div>
         )}

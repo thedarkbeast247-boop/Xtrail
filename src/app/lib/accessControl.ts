@@ -4,6 +4,7 @@ export const FREE_PLAN_VEHICLE_LIMIT = 2;
 export const FREE_PLAN_TRAIL_VIEW_LIMIT = 5;
 export const FREE_PLAN_SAVED_TRAILS_LIMIT = 5;
 export const FREE_PLAN_RIDE_HISTORY_LIMIT = 5;
+export const FREE_PLAN_COMPLETED_TRAILS_LIMIT = 5;
 
 export function isActiveAccount(user: UserAccessProfile) {
   return user.accountStatus === "active";
@@ -103,8 +104,12 @@ export function getAccessLabel(user: UserAccessProfile) {
   if (isAdmin(user)) return "Admin access";
   if (isContributor(user)) return "Contributor access";
   if (user.manualFullAccess) return "Manual full access";
-  if (isPaidUser(user)) return "Paid plan";
-  return "Free plan";
+  if (isPaidUser(user)) return "Pro Plan";
+  return "Free Plan";
+}
+
+export function getPublicPlanLabel(user: UserAccessProfile) {
+  return hasFullAppAccess(user) ? "Pro Plan" : "Free Plan";
 }
 
 export function getContributorProgressLabel(user: UserAccessProfile) {
@@ -119,7 +124,7 @@ export function getGarageAccess(
 
   return {
     unlimited,
-    accessLabel: getAccessLabel(user),
+    accessLabel: getPublicPlanLabel(user),
     vehicleLimit: unlimited ? null : FREE_PLAN_VEHICLE_LIMIT,
     vehicleLimitLabel: unlimited
       ? "Unlimited"
@@ -141,7 +146,7 @@ export function getTrailDiscoveryAccess(
 
   return {
     unlimited,
-    accessLabel: getAccessLabel(user),
+    accessLabel: getPublicPlanLabel(user),
     visibleLimit,
     trailViewLimitLabel: unlimited
       ? "Unlimited"
@@ -169,6 +174,7 @@ export function getSavedTrailsAccess(
 
   return {
     unlimited,
+    accessLabel: getPublicPlanLabel(user),
     visibleLimit,
     savedTrailLimitLabel: unlimited
       ? "Unlimited"
@@ -196,6 +202,7 @@ export function getRideHistoryAccess(
 
   return {
     unlimited,
+    accessLabel: getPublicPlanLabel(user),
     visibleLimit,
     rideHistoryLimitLabel: unlimited
       ? "Unlimited"
@@ -211,111 +218,142 @@ export function getRideHistoryAccess(
   };
 }
 
+export function getCompletedTrailsAccess(
+  user: UserAccessProfile,
+  currentCompletedTrailCount: number
+) {
+  const unlimited = canAccessFeature(user, "completed_trails_unlimited");
+
+  const visibleLimit = unlimited
+    ? currentCompletedTrailCount
+    : FREE_PLAN_COMPLETED_TRAILS_LIMIT;
+
+  return {
+    unlimited,
+    accessLabel: getPublicPlanLabel(user),
+    visibleLimit,
+    completedTrailLimitLabel: unlimited
+      ? "Unlimited"
+      : `${Math.min(
+          currentCompletedTrailCount,
+          FREE_PLAN_COMPLETED_TRAILS_LIMIT
+        )}/${FREE_PLAN_COMPLETED_TRAILS_LIMIT}`,
+    hiddenCount: unlimited
+      ? 0
+      : Math.max(
+          0,
+          currentCompletedTrailCount - FREE_PLAN_COMPLETED_TRAILS_LIMIT
+        ),
+    isLimitReached:
+      !unlimited &&
+      currentCompletedTrailCount >= FREE_PLAN_COMPLETED_TRAILS_LIMIT,
+  };
+}
+
 export function getFeatureUpgradeContent(feature: FeatureKey) {
   if (feature === "trail_discovery_unlimited") {
     return {
-      title: "Unlock more trails in your area",
+      title: "Pro Plan required",
       message:
-        "Free users can view up to 5 trails in their selected area. Upgrade to see unlimited trails, premium routes, and advanced trail details.",
-      ctaLabel: "Upgrade Trails",
+        "Free users can view up to 5 trails in their selected area. Subscribe to the Pro Plan to view unlimited trails.",
+      ctaLabel: "Subscribe Now",
     };
   }
 
   if (feature === "garage_unlimited_vehicles") {
     return {
-      title: "Unlock unlimited Garage",
+      title: "Pro Plan required",
       message:
-        "Free users can add up to 2 vehicles. Upgrade to add unlimited vehicles, setup tracking, and full garage insights.",
-      ctaLabel: "Upgrade Garage",
+        "Free users can add up to 2 vehicles. Subscribe to the Pro Plan to add unlimited vehicles.",
+      ctaLabel: "Subscribe Now",
     };
   }
 
   if (feature === "premium_trails") {
     return {
-      title: "Unlock premium trails",
+      title: "Pro Plan required",
       message:
-        "Free users can preview trails. Upgrade to view full premium trail details, route insights, and advanced trail information.",
-      ctaLabel: "Upgrade Trails",
+        "Subscribe to the Pro Plan to unlock full trail details, route insights, and advanced trail information.",
+      ctaLabel: "Subscribe Now",
     };
   }
 
   if (feature === "offline_maps") {
     return {
-      title: "Unlock offline maps",
+      title: "Pro Plan required",
       message:
-        "Offline maps are a premium feature built for riders who need access when signal drops.",
-      ctaLabel: "Upgrade Maps",
+        "Subscribe to the Pro Plan to download and use trails when signal drops.",
+      ctaLabel: "Subscribe Now",
     };
   }
 
   if (feature === "advanced_analytics") {
     return {
-      title: "Unlock advanced analytics",
+      title: "Pro Plan required",
       message:
-        "Free users get basic ride tracking. Upgrade to see advanced progress charts, trends, riding history, and performance insights.",
-      ctaLabel: "Upgrade Analytics",
+        "Subscribe to the Pro Plan to unlock progress charts, riding trends, and long-term performance insights.",
+      ctaLabel: "Subscribe Now",
     };
   }
 
   if (feature === "gpx_exports") {
     return {
-      title: "Unlock GPX exports",
+      title: "Pro Plan required",
       message:
-        "Upgrade to export your rides and trails for backup, sharing, and external GPS tools.",
-      ctaLabel: "Upgrade Exports",
+        "Subscribe to the Pro Plan to export rides and trails for backup, sharing, and external GPS tools.",
+      ctaLabel: "Subscribe Now",
     };
   }
 
   if (feature === "saved_trails_unlimited") {
     return {
-      title: "Subscribe to view unlimited saved trails",
+      title: "Pro Plan required",
       message:
-        "Free users can view up to 5 saved trails. Subscribe to unlock your full saved trail library.",
+        "Free users can view up to 5 saved trails. Subscribe to the Pro Plan to unlock unlimited saved trails.",
       ctaLabel: "Subscribe Now",
     };
   }
 
   if (feature === "ride_history_unlimited") {
-  return {
-    title: "Subscribe to view unlimited ride history",
-    message:
-      "Free users can view up to 5 recent rides. Subscribe to unlock your full ride history and long-term stats.",
-    ctaLabel: "Subscribe Now",
-  };
-}
+    return {
+      title: "Pro Plan required",
+      message:
+        "Free users can view up to 5 recent rides. Subscribe to the Pro Plan to unlock unlimited ride history.",
+      ctaLabel: "Subscribe Now",
+    };
+  }
 
   if (feature === "completed_trails_unlimited") {
     return {
-      title: "Unlock completed trail history",
+      title: "Pro Plan required",
       message:
-        "Upgrade to keep a full record of completed trails and long-term progress.",
-      ctaLabel: "Upgrade Progress",
+        "Free users can view up to 5 completed trails. Subscribe to the Pro Plan to unlock unlimited completed trails.",
+      ctaLabel: "Subscribe Now",
     };
   }
 
   if (feature === "friends_groups") {
     return {
-      title: "Unlock advanced groups",
+      title: "Pro Plan required",
       message:
-        "Upgrade to create and manage advanced riding groups, shared rides, and community planning tools.",
-      ctaLabel: "Upgrade Groups",
+        "Subscribe to the Pro Plan to create and manage advanced riding groups, shared rides, and group planning tools.",
+      ctaLabel: "Subscribe Now",
     };
   }
 
   if (feature === "admin_area") {
     return {
-      title: "Admin access required",
-      message:
-        "Only the Global Admin / Owner and Admin users can access this area.",
+      title: "Access required",
+      message: "You do not have permission to access this area.",
       ctaLabel: "Back to Profile",
     };
   }
 
   return {
-    title: "Premium feature",
+    title: "Pro Plan required",
     message:
-      "Upgrade to unlock this feature and get full access to XTrail.",
-    ctaLabel: "Upgrade",
+      "Subscribe to the Pro Plan to unlock this feature and get full access to XTrail.",
+    ctaLabel: "Subscribe Now",
   };
 }
 
@@ -325,7 +363,7 @@ export function getFeatureAccess(user: UserAccessProfile, feature: FeatureKey) {
 
   return {
     allowed,
-    accessLabel: getAccessLabel(user),
+    accessLabel: getPublicPlanLabel(user),
     ...upgradeContent,
   };
 }

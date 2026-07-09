@@ -54,7 +54,12 @@ export function ProgressDashboard() {
       </div>
 
       <div className="px-4 py-5 space-y-6">
-        <AccessGate feature="advanced_analytics">
+        <AccessGate
+          feature="advanced_analytics"
+          fallbackTitle="Pro Plan required"
+          fallbackMessage="Subscribe to the Pro Plan to unlock your Progress Dashboard, ride trends, vehicle comparisons, and long-term stats."
+          fallbackCtaLabel="Subscribe Now"
+        >
           {/* Vehicle & Time Range Selectors */}
           <div className="grid grid-cols-2 gap-3">
             <div>

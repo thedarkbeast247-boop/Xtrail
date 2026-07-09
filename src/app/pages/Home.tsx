@@ -1015,7 +1015,7 @@ export function Home() {
                 {selectedTrail.isPremium && (
                   <div className="absolute top-3 left-3 bg-amber-500 text-neutral-900 px-2 py-1 rounded-md flex items-center gap-1">
                     <Lock className="w-3 h-3" />
-                    <span className="text-xs font-bold">Premium</span>
+                    <span className="text-xs font-bold">Pro</span>
                   </div>
                 )}
               </div>
@@ -1502,13 +1502,13 @@ export function Home() {
             <div className="mb-4">
               <LockedFeatureCard
                 compact
-                title="Unlock more trails in this area"
+                title="Pro Plan required"
                 message={`There ${
                   hiddenTrailCount === 1 ? "is" : "are"
                 } ${hiddenTrailCount} more trail${
                   hiddenTrailCount === 1 ? "" : "s"
-                } hidden on the free plan. Upgrade to view unlimited trails in your selected area.`}
-                ctaLabel="Upgrade Trails"
+                } waiting in this area. Subscribe to the Pro Plan to view unlimited trails.`}
+                ctaLabel="Subscribe Now"
               />
             </div>
           )}

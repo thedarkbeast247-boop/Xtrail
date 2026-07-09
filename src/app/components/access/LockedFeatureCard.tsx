@@ -13,7 +13,7 @@ interface LockedFeatureCardProps {
 export function LockedFeatureCard({
   title,
   message,
-  ctaLabel = "Subscribe",
+  ctaLabel = "Subscribe Now",
   compact = false,
 }: LockedFeatureCardProps) {
   return (
@@ -29,7 +29,7 @@ export function LockedFeatureCard({
 
         <div className="flex items-center gap-1 rounded-full border border-orange-500/20 bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-400">
           <Crown className="h-3.5 w-3.5" />
-          Premium
+          Pro Plan
         </div>
       </div>
 
