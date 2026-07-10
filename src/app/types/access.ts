@@ -19,6 +19,32 @@ export type ContributorStatus =
 
 export type UserAccountStatus = "active" | "suspended" | "disabled";
 
+export type ProAccessEndedReason =
+  | "payment_missed"
+  | "payment_failed"
+  | "subscription_cancelled"
+  | "subscription_expired"
+  | "trial_ended"
+  | "refund_processed"
+  | "chargeback_disputed"
+  | "subscription_paused"
+  | "manual_downgrade"
+  | "account_suspended";
+
+export type ProAccessReviewStatus =
+  | "not_required"
+  | "needs_review"
+  | "reviewed"
+  | "retention_warning"
+  | "retention_expired";
+
+export interface FreePlanSelections {
+  vehicleIds: string[];
+  savedTrailIds: string[];
+  rideIds: string[];
+  completedTrailIds: string[];
+}
+
 export type FeatureKey =
   | "garage_unlimited_vehicles"
   | "premium_trails"
@@ -44,6 +70,13 @@ export interface UserAccessProfile {
   plan: AppPlan;
   subscriptionStatus: SubscriptionStatus;
   accountStatus: UserAccountStatus;
+
+  proAccessEndedReason: ProAccessEndedReason | null;
+  proAccessEndedAt: string | null;
+  proAccessDataDeleteAfter: string | null;
+  proAccessReviewStatus: ProAccessReviewStatus;
+  proAccessReviewedAt: string | null;
+  freePlanSelections: FreePlanSelections;
 
   manualFullAccess: boolean;
   manualFullAccessReason?: string;

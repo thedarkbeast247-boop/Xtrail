@@ -29,6 +29,7 @@ import { DevDataTransfer } from "./pages/DevDataTransfer";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { ForgotPassword } from "./pages/ForgotPassword";
+import { PlanReview } from "./pages/PlanReview";
 
 function authPage(page: ReactNode) {
   return <Layout showBottomNav={false}>{page}</Layout>;
@@ -70,6 +71,10 @@ export const router = createBrowserRouter([
   {
     path: "/subscription",
     Component: () => protectedPage(<Subscription />),
+  },
+  {
+    path: "/account/plan-review",
+    Component: () => protectedPage(<PlanReview />),
   },
   {
     path: "/profile",

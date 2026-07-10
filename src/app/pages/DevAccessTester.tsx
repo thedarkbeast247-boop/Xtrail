@@ -1,7 +1,9 @@
 import { Link } from "react-router";
 import {
+  AlertTriangle,
   BadgeCheck,
   Crown,
+  RotateCcw,
   ShieldCheck,
   User,
   UserCog,
@@ -47,6 +49,8 @@ export function DevAccessTester() {
     currentUserAccess,
     users,
     switchCurrentUser,
+    markProAccessEnded,
+    clearProAccessReview,
   } = useUserAccess();
 
   const { showNotification } = useNotification();
@@ -65,6 +69,44 @@ export function DevAccessTester() {
       </div>
     );
   }
+
+  const handleSimulatePaymentFailed = () => {
+    try {
+      markProAccessEnded(currentUserId, "payment_failed");
+
+      showNotification({
+        title: "Payment failed simulated",
+        message: "This user now needs to review their Free Plan selections.",
+        variant: "warning",
+      });
+    } catch (error) {
+      showNotification({
+        title: "Could not simulate downgrade",
+        message:
+          error instanceof Error ? error.message : "Something went wrong.",
+        variant: "error",
+      });
+    }
+  };
+
+  const handleRestoreProPlan = () => {
+    try {
+      clearProAccessReview(currentUserId);
+
+      showNotification({
+        title: "Pro Plan restored",
+        message: "This user has full Pro access again.",
+        variant: "success",
+      });
+    } catch (error) {
+      showNotification({
+        title: "Could not restore Pro",
+        message:
+          error instanceof Error ? error.message : "Something went wrong.",
+        variant: "error",
+      });
+    }
+  };
 
   const handleSwitchUser = (userId: string) => {
     const user = users.find((item) => item.id === userId);
@@ -127,6 +169,47 @@ export function DevAccessTester() {
             This is only for testing access rules before real login is connected.
             It must not be used as real security.
           </p>
+        </div>
+
+        <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
+          <p className="text-sm font-semibold text-white">
+            Pro downgrade testing
+          </p>
+
+          <p className="mt-1 text-xs text-neutral-400">
+            Simulate a missed payment or restore Pro access for the current demo user.
+          </p>
+
+          <div className="mt-4 grid grid-cols-1 gap-3">
+            <Button
+              type="button"
+              onClick={handleSimulatePaymentFailed}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              <AlertTriangle className="mr-2 h-4 w-4" />
+              Simulate Payment Failed
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleRestoreProPlan}
+              className="border-neutral-700 text-neutral-300 hover:bg-neutral-800"
+            >
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Restore Pro Plan
+            </Button>
+
+            <Link to="/account/plan-review">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full border-orange-500/40 text-orange-400 hover:bg-orange-500/10"
+              >
+                Open Plan Review
+              </Button>
+            </Link>
+          </div>
         </div>
 
         <div className="space-y-3">

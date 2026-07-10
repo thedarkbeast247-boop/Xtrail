@@ -16,6 +16,8 @@ import {
 import type {
   AppPlan,
   AppRole,
+  FreePlanSelections,
+  ProAccessEndedReason,
   UserAccessProfile,
 } from "../types/access";
 
@@ -41,9 +43,64 @@ interface UserAccessContextValue {
 
   grantManualFullAccess: (userId: string, reason?: string) => void;
   removeManualFullAccess: (userId: string) => void;
+
+  markProAccessEnded: (
+    userId: string,
+    reason: ProAccessEndedReason
+  ) => void;
+
+  reviewFreePlanSelections: (
+    userId: string,
+    selections: FreePlanSelections
+  ) => void;
+
+  clearProAccessReview: (userId: string) => void;
 }
 
 const now = new Date().toISOString();
+
+function getDateAfterDays(days: number) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date.toISOString();
+}
+
+function getEmptyFreePlanSelections(): FreePlanSelections {
+  return {
+    vehicleIds: [],
+    savedTrailIds: [],
+    rideIds: [],
+    completedTrailIds: [],
+  };
+}
+
+function getDefaultProAccessState() {
+  return {
+    proAccessEndedReason: null,
+    proAccessEndedAt: null,
+    proAccessDataDeleteAfter: null,
+    proAccessReviewStatus: "not_required" as const,
+    proAccessReviewedAt: null,
+    freePlanSelections: getEmptyFreePlanSelections(),
+  };
+}
+
+function withProAccessDefaults(user: UserAccessProfile): UserAccessProfile {
+  return {
+    ...user,
+    proAccessEndedReason: user.proAccessEndedReason ?? null,
+    proAccessEndedAt: user.proAccessEndedAt ?? null,
+    proAccessDataDeleteAfter: user.proAccessDataDeleteAfter ?? null,
+    proAccessReviewStatus: user.proAccessReviewStatus ?? "not_required",
+    proAccessReviewedAt: user.proAccessReviewedAt ?? null,
+    freePlanSelections: {
+      vehicleIds: user.freePlanSelections?.vehicleIds ?? [],
+      savedTrailIds: user.freePlanSelections?.savedTrailIds ?? [],
+      rideIds: user.freePlanSelections?.rideIds ?? [],
+      completedTrailIds: user.freePlanSelections?.completedTrailIds ?? [],
+    },
+  };
+}
 
 const ownerAccessProfile: UserAccessProfile = {
   id: "owner-rudie-maartens",
@@ -78,6 +135,8 @@ const ownerAccessProfile: UserAccessProfile = {
 
   createdAt: now,
   updatedAt: now,
+
+  ...getDefaultProAccessState(),
 };
 
 
@@ -143,6 +202,8 @@ function lockOwnerProfile(user: UserAccessProfile): UserAccessProfile {
     twoFactorRequiredForSensitiveActions: true,
     trustedDeviceIds: user.trustedDeviceIds ?? [],
     lastTwoFactorVerifiedAt: user.lastTwoFactorVerifiedAt ?? "",
+
+    ...getDefaultProAccessState(),
   };
 }
 
@@ -179,6 +240,8 @@ const demoFreeUser: UserAccessProfile = {
 
   createdAt: now,
   updatedAt: now,
+
+  ...getDefaultProAccessState(),
 };
 
 const demoPaidUser: UserAccessProfile = {
@@ -214,6 +277,8 @@ const demoPaidUser: UserAccessProfile = {
 
   createdAt: now,
   updatedAt: now,
+
+  ...getDefaultProAccessState(),
 };
 
 const demoContributorUser: UserAccessProfile = {
@@ -249,6 +314,8 @@ const demoContributorUser: UserAccessProfile = {
 
   createdAt: now,
   updatedAt: now,
+
+  ...getDefaultProAccessState(),
 };
 
 const demoAdminUser: UserAccessProfile = {
@@ -284,6 +351,8 @@ const demoAdminUser: UserAccessProfile = {
 
   createdAt: now,
   updatedAt: now,
+
+  ...getDefaultProAccessState(),
 };
 
 const defaultAccessProfiles = [
@@ -300,13 +369,13 @@ const AUTH_STORAGE_KEY = "xtrail-authenticated";
 
 function getInitialUserAccessProfiles() {
   if (typeof window === "undefined") {
-    return defaultAccessProfiles;
+    return defaultAccessProfiles.map(withProAccessDefaults);
   }
 
   const storedProfiles = window.localStorage.getItem(USER_ACCESS_STORAGE_KEY);
 
   if (!storedProfiles) {
-    return defaultAccessProfiles;
+    return defaultAccessProfiles.map(withProAccessDefaults);
   }
 
   try {
@@ -337,19 +406,23 @@ function getInitialUserAccessProfiles() {
       updatedAt: new Date().toISOString(),
     };
 
-    const otherProfiles = parsedProfiles
-    .filter((user) => user.id !== ownerAccessProfile.id)
-    .map((user) => ({
-      ...user,
-      twoFactorRequiredOnFirstLogin:
-        user.twoFactorRequiredOnFirstLogin ?? false,
-      twoFactorRequiredForNewDevice:
-        user.twoFactorRequiredForNewDevice ?? false,
-      twoFactorRequiredForSensitiveActions:
-        user.twoFactorRequiredForSensitiveActions ?? false,
-      trustedDeviceIds: user.trustedDeviceIds ?? [],
-      lastTwoFactorVerifiedAt: user.lastTwoFactorVerifiedAt ?? "",
-    }));
+      const otherProfiles = parsedProfiles
+      .filter((user) => user.id !== ownerAccessProfile.id)
+      .map((user) => {
+        const normalizedUser = withProAccessDefaults(user);
+
+        return {
+          ...normalizedUser,
+          twoFactorRequiredOnFirstLogin:
+            normalizedUser.twoFactorRequiredOnFirstLogin ?? false,
+          twoFactorRequiredForNewDevice:
+            normalizedUser.twoFactorRequiredForNewDevice ?? false,
+          twoFactorRequiredForSensitiveActions:
+            normalizedUser.twoFactorRequiredForSensitiveActions ?? false,
+          trustedDeviceIds: normalizedUser.trustedDeviceIds ?? [],
+          lastTwoFactorVerifiedAt: normalizedUser.lastTwoFactorVerifiedAt ?? "",
+        };
+      });
 
     const missingDefaultProfiles = defaultAccessProfiles.filter((defaultUser) => {
       if (defaultUser.id === ownerAccessProfile.id) return false;
@@ -357,10 +430,14 @@ function getInitialUserAccessProfiles() {
       return !otherProfiles.some((user) => user.id === defaultUser.id);
     });
 
-    return [lockedOwnerProfile, ...otherProfiles, ...missingDefaultProfiles];
+    return [
+      lockedOwnerProfile,
+      ...otherProfiles,
+      ...missingDefaultProfiles.map(withProAccessDefaults),
+    ];
   } catch (error) {
     console.error("Failed to load user access profiles:", error);
-    return defaultAccessProfiles;
+    return defaultAccessProfiles.map(withProAccessDefaults);
   }
 }
 
@@ -444,6 +521,45 @@ export function UserAccessProvider({ children }: { children: ReactNode }) {
     );
   };
 
+    const markProAccessEnded = (
+    userId: string,
+    reason: ProAccessEndedReason
+  ) => {
+    if (isOwnerUser(userId)) {
+      throw new Error("The Global Admin / Owner plan cannot be downgraded.");
+    }
+
+    updateUserAccess(userId, {
+      plan: "free",
+      subscriptionStatus:
+        reason === "subscription_cancelled" ? "cancelled" : "past_due",
+      proAccessEndedReason: reason,
+      proAccessEndedAt: new Date().toISOString(),
+      proAccessDataDeleteAfter: getDateAfterDays(90),
+      proAccessReviewStatus: "needs_review",
+      proAccessReviewedAt: null,
+    });
+  };
+
+  const reviewFreePlanSelections = (
+    userId: string,
+    selections: FreePlanSelections
+  ) => {
+    updateUserAccess(userId, {
+      freePlanSelections: selections,
+      proAccessReviewStatus: "reviewed",
+      proAccessReviewedAt: new Date().toISOString(),
+    });
+  };
+
+  const clearProAccessReview = (userId: string) => {
+    updateUserAccess(userId, {
+      ...getDefaultProAccessState(),
+      plan: "paid",
+      subscriptionStatus: "active",
+    });
+  };
+
   const value = useMemo<UserAccessContextValue>(
     () => ({
       currentUserId,
@@ -509,15 +625,22 @@ export function UserAccessProvider({ children }: { children: ReactNode }) {
         updateUserAccess(userId, { role });
       },
 
-      setUserPlan: (userId, plan) => {
+        setUserPlan: (userId, plan) => {
         if (isOwnerUser(userId)) {
           throw new Error("The Global Admin / Owner plan cannot be changed.");
         }
 
-        updateUserAccess(userId, {
-          plan,
-          subscriptionStatus: plan === "paid" ? "active" : "none",
-        });
+        if (plan === "paid") {
+          updateUserAccess(userId, {
+            ...getDefaultProAccessState(),
+            plan: "paid",
+            subscriptionStatus: "active",
+          });
+
+          return;
+        }
+
+        markProAccessEnded(userId, "manual_downgrade");
       },
 
       grantManualFullAccess: (userId, reason = "") => {
@@ -555,6 +678,9 @@ export function UserAccessProvider({ children }: { children: ReactNode }) {
           manualFullAccessGrantedAt: "",
         });
       },
+      markProAccessEnded,
+      reviewFreePlanSelections,
+      clearProAccessReview,
     }),
     [currentUserId, currentUserAccess, users, isAuthenticated]
   );
