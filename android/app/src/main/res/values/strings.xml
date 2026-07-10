@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Xtrail</string>
+    <string name="title_activity_main">Xtrail</string>
+    <string name="package_name">com.xtrail.app</string>
+    <string name="custom_url_scheme">com.xtrail.app</string>
+</resources>
