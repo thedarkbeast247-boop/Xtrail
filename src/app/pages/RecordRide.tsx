@@ -332,7 +332,7 @@ export function RecordRide() {
             <div className="bg-emerald-600 h-2 rounded-full" style={{ width: '60%' }}></div>
           </div>
           <p className="text-neutral-400 text-xs mt-2">
-            Upgrade to Premium for unlimited ride tracking
+            Subscribe to the Pro Plan for unlimited ride history
           </p>
         </div>
       </div>

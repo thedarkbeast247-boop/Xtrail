@@ -338,7 +338,7 @@ export function TrailDetail() {
 
               {trail.isPremium && (
                 <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-black">
-                  Premium
+                  Pro
                 </span>
               )}
             </div>
@@ -518,7 +518,7 @@ export function TrailDetail() {
                       <Lock className="mt-0.5 h-4 w-4 text-neutral-500" />
                       <p>
                         {trail.isPremium
-                          ? "Premium trail access required for full route tools."
+                          ? "Pro Plan required for full route tools."
                           : "Public community trail available in the standard feed."}
                       </p>
                     </div>

@@ -91,7 +91,7 @@ export interface UserAccessProfile {
 
   trustLevel: number;
 
-    twoFactorEnabled: boolean;
+  twoFactorEnabled: boolean;
   twoFactorRequired: boolean;
 
   twoFactorRequiredOnFirstLogin: boolean;

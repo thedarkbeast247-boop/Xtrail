@@ -32,7 +32,7 @@ import { getRideStats, formatRideDuration, type SavedRide } from "../utils/rideS
 import { type CompletedTrail } from "../types/completedTrail";
 import { type SavedTrail } from "../types/savedTrail";
 import { useUserAccess } from "../context/UserAccessContext";
-import { canAccessAdminArea } from "../lib/accessControl";
+import { canAccessAdminArea, getPublicPlanLabel } from "../lib/accessControl";
 import { useNotification } from "../context/NotificationContext";
 
 
@@ -164,12 +164,8 @@ export function Profile() {
     return `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`.toUpperCase();
   };
 
-  const mockUser = {
-    name: "Xtrail Rider",
-    email: "rider@xtrail.app",
-    memberSince: "2026-01-01T00:00:00.000Z",
-    isPremium: false,
-  };
+  const currentPlanLabel = getPublicPlanLabel(currentUserAccess);
+  const hasProAccess = currentPlanLabel === "Pro Plan";
 
   return (
     <div className="min-h-full bg-neutral-950">
@@ -177,18 +173,18 @@ export function Profile() {
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-full flex items-center justify-center text-white text-xl">
-              {mockUser.name
+              {currentUserAccess.displayName
                 .split(" ")
-                .map((n) => n[0])
+                .map((namePart) => namePart[0])
                 .join("")}
             </div>
             <div>
-              <h1 className="text-white text-xl mb-0.5">{mockUser.name}</h1>
-              <p className="text-neutral-400 text-sm">{mockUser.email}</p>
+              <h1 className="text-white text-xl mb-0.5">{currentUserAccess.displayName}</h1>
+              <p className="text-neutral-400 text-sm">{currentUserAccess.email}</p>
               <div className="flex items-center gap-1.5 mt-1">
                 <Calendar className="w-3.5 h-3.5 text-neutral-500" />
                 <span className="text-neutral-500 text-xs">
-                  Since {formatDate(mockUser.memberSince)}
+                  Since {formatDate(currentUserAccess.createdAt)}
                 </span>
               </div>
             </div>
@@ -203,18 +199,18 @@ export function Profile() {
           <div className="flex items-center gap-2">
             <Crown
               className={`w-4 h-4 ${
-                mockUser.isPremium ? "text-amber-500" : "text-neutral-500"
+                hasProAccess ? "text-amber-500" : "text-neutral-500"
               }`}
             />
             <span className="text-white text-sm">
-              {mockUser.isPremium ? "Premium Member" : "Free Plan"}
+              {currentPlanLabel}
             </span>
           </div>
 
-          {!mockUser.isPremium && (
+          {!hasProAccess && (
             <Link to="/subscription">
               <Button size="sm" className="bg-amber-600 hover:bg-amber-700 h-8 text-xs">
-                Upgrade
+                Subscribe Now
               </Button>
             </Link>
           )}

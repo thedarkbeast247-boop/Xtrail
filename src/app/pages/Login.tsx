@@ -169,13 +169,15 @@ export function Login() {
           </div>
         </div>
 
-        <div className="mt-5 rounded-2xl border border-orange-500/20 bg-orange-500/10 p-4">
-          <p className="text-xs font-semibold text-orange-400">Demo accounts</p>
+        {import.meta.env.DEV && (
+          <div className="mt-5 rounded-2xl border border-orange-500/20 bg-orange-500/10 p-4">
+            <p className="text-xs font-semibold text-orange-400">Demo accounts</p>
 
-          <p className="mt-1 text-xs text-neutral-400">
-            Use rudie@xtrail.app, admin@xtrail.app, contributor@xtrail.app, paiduser@xtrail.app, or freeuser@xtrail.app. Any password works for now.
-          </p>
-        </div>
+            <p className="mt-1 text-xs text-neutral-400">
+              Use rudie@xtrail.app, admin@xtrail.app, contributor@xtrail.app, paiduser@xtrail.app, or freeuser@xtrail.app. Any password works for now.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

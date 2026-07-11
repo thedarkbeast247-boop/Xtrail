@@ -126,7 +126,7 @@ export default function TrailCard({ trail, isCompleted = false, isSaved = false 
 
             {trail.isPremium && (
               <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-black">
-                Premium
+                Pro
               </span>
             )}
           </div>
