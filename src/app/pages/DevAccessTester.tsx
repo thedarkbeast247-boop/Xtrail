@@ -20,6 +20,10 @@ import {
 } from "../lib/accessControl";
 import type { AppRole } from "../types/access";
 
+const devToolsEnabled =
+  import.meta.env.DEV ||
+  import.meta.env.VITE_ENABLE_DEV_TOOLS === "true";
+
 function getRoleIcon(role: AppRole) {
   if (role === "global_admin") return <Crown className="h-5 w-5 text-red-400" />;
   if (role === "admin") return <ShieldCheck className="h-5 w-5 text-purple-400" />;
@@ -55,7 +59,7 @@ export function DevAccessTester() {
 
   const { showNotification } = useNotification();
 
-  if (!import.meta.env.DEV) {
+  if (!devToolsEnabled) {
     return (
       <div className="min-h-full bg-neutral-950 px-4 py-6">
         <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
@@ -63,7 +67,7 @@ export function DevAccessTester() {
             Developer tools unavailable
           </h1>
           <p className="mt-2 text-sm text-neutral-400">
-            This page is only available during local development.
+            Developer tools are disabled for this build.
           </p>
         </div>
       </div>
@@ -163,11 +167,11 @@ export function DevAccessTester() {
       <div className="space-y-5 px-4 py-5">
         <div className="rounded-2xl border border-orange-500/20 bg-orange-500/10 p-4">
           <p className="text-sm font-semibold text-orange-400">
-            Local testing only
+            Private testing only
           </p>
           <p className="mt-1 text-xs text-neutral-400">
-            This is only for testing access rules before real login is connected.
-            It must not be used as real security.
+            This tool is enabled only for private testing before the public release.
+            It must be disabled before XTrail goes live.
           </p>
         </div>
 

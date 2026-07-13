@@ -32,7 +32,11 @@ import { getRideStats, formatRideDuration, type SavedRide } from "../utils/rideS
 import { type CompletedTrail } from "../types/completedTrail";
 import { type SavedTrail } from "../types/savedTrail";
 import { useUserAccess } from "../context/UserAccessContext";
-import { canAccessAdminArea, getPublicPlanLabel } from "../lib/accessControl";
+import {
+  canAccessAdminArea,
+  getPublicPlanLabel,
+  isGlobalAdmin,
+} from "../lib/accessControl";
 import { useNotification } from "../context/NotificationContext";
 
 
@@ -40,6 +44,7 @@ export function Profile() {
   const { currentUserAccess, signOut } = useUserAccess();
   const { showNotification } = useNotification();
   const canOpenAdminArea = canAccessAdminArea(currentUserAccess);
+  const isOwnerAccount = isGlobalAdmin(currentUserAccess);
 
   const { vehicles, activeVehicle, setActiveVehicleId } = useVehicles();
   const { getServicesForVehicle } = useServices();
@@ -302,7 +307,7 @@ export function Profile() {
                 </div>
               </Link>
             )}
-            {import.meta.env.DEV && (
+            {isOwnerAccount && (
               <Link to="/dev/access-tester">
                 <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-3 min-h-[108px] flex flex-col items-center justify-center
                   transition-all duration-200 hover:border-neutral-700 hover:bg-neutral-800/60 active:scale-95">
@@ -313,14 +318,18 @@ export function Profile() {
                 </div>
               </Link>
             )}
-            {import.meta.env.DEV && (
+            {isOwnerAccount && (
               <Link to="/dev/data-transfer">
-                <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-3 min-h-[108px] flex flex-col items-center justify-center
-                  transition-all duration-200 hover:border-neutral-700 hover:bg-neutral-800/60 active:scale-95">
+                <div
+                  className="bg-neutral-900 border border-neutral-800 rounded-2xl p-3 min-h-[108px] flex flex-col items-center justify-center
+                    transition-all duration-200 hover:border-neutral-700 hover:bg-neutral-800/60 active:scale-95"
+                >
                   <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center mx-auto mb-2">
                     <Database className="w-5 h-5 text-blue-400" />
                   </div>
-                  <div className="text-white text-xs text-center">Data Transfer</div>
+                  <div className="text-white text-xs text-center">
+                    Data Transfer
+                  </div>
                 </div>
               </Link>
             )}

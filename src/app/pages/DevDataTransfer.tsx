@@ -13,6 +13,8 @@ import {
 
 import { Button } from "../components/ui/button";
 import { useNotification } from "../context/NotificationContext";
+import { useUserAccess } from "../context/UserAccessContext";
+import { isGlobalAdmin } from "../lib/accessControl";
 
 interface XTrailDataExport {
   app: "xtrail";
@@ -76,6 +78,9 @@ function validateImportPayload(value: unknown): XTrailDataExport {
 
 export function DevDataTransfer() {
   const { showNotification } = useNotification();
+  const { currentUserAccess } = useUserAccess();
+
+  const canUseDataTransfer = isGlobalAdmin(currentUserAccess);
 
   const [exportText, setExportText] = useState("");
   const [importText, setImportText] = useState("");
@@ -235,7 +240,7 @@ export function DevDataTransfer() {
       showNotification({
         title: "Tap again to clear",
         message:
-          "This will remove XTrail test data from this browser only. Tap Clear Local Data again to confirm.",
+          "This will remove XTrail data from this device only. Tap Clear Local Data again to confirm.",
         variant: "warning",
       });
 
@@ -256,7 +261,7 @@ export function DevDataTransfer() {
       title: "Local data cleared",
       message: `${keysToRemove.length} XTrail data item${
         keysToRemove.length === 1 ? "" : "s"
-      } removed from this browser.`,
+      } removed from this device.`,
       variant: "info",
     });
 
@@ -265,7 +270,7 @@ export function DevDataTransfer() {
     }, 700);
   };
 
-  if (!import.meta.env.DEV) {
+    if (!canUseDataTransfer) {
     return (
       <div className="min-h-full bg-neutral-950 px-4 py-5 text-white">
         <Link to="/profile">
@@ -279,9 +284,9 @@ export function DevDataTransfer() {
         </Link>
 
         <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-          <h1 className="text-xl font-semibold">Dev Data Transfer</h1>
+          <h1 className="text-xl font-semibold">Data Transfer unavailable</h1>
           <p className="mt-2 text-sm text-neutral-400">
-            This tool is only available in development mode.
+            This tool is restricted to the protected XTrail owner account.
           </p>
         </div>
       </div>
@@ -303,10 +308,10 @@ export function DevDataTransfer() {
           </Link>
 
           <div>
-            <h1 className="text-xl font-semibold">Dev Data Transfer</h1>
-            <p className="text-sm text-neutral-400">
-              Move local XTrail test data between desktop and phone.
-            </p>
+            <h1 className="text-xl font-semibold">Data Transfer</h1>
+              <p className="text-sm text-neutral-400">
+                Move local XTrail data between desktop and phone.
+              </p>
           </div>
         </div>
       </div>
@@ -320,15 +325,15 @@ export function DevDataTransfer() {
 
             <div>
               <p className="text-sm font-semibold text-blue-300">
-                Current browser data
+                Current device data
               </p>
               <p className="mt-1 text-sm text-neutral-300">
-                This browser currently has {currentStorageCount} XTrail data
+                This device currently has {currentStorageCount} XTrail data
                 item{currentStorageCount === 1 ? "" : "s"} stored.
               </p>
               <p className="mt-2 text-xs text-neutral-500">
-                Desktop and phone browsers do not share localStorage. This tool
-                copies your local test data manually until the backend is added.
+                The desktop browser and Android app do not share localStorage. This
+                tool copies your local data manually until the backend is added.
               </p>
             </div>
           </div>
@@ -446,10 +451,10 @@ export function DevDataTransfer() {
             </div>
 
             <div>
-              <h2 className="font-semibold text-white">Clear local test data</h2>
-              <p className="text-sm text-neutral-400">
-                Clears XTrail data from this browser only.
-              </p>
+              <h2 className="font-semibold text-white">Clear local data</h2>
+                <p className="text-sm text-neutral-400">
+                  Clears XTrail data from this device only.
+                </p>
             </div>
           </div>
 
