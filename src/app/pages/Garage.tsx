@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Plus,
   Edit,
@@ -11,6 +11,7 @@ import {
   Gauge,
   ShieldCheck,
   BarChart3,
+  Lock,
 } from "lucide-react";
 import { Link } from "react-router";
 import { useServices } from "../context/ServiceContext";
@@ -43,6 +44,7 @@ import { useNotification } from "../context/NotificationContext";
 import { useUserAccess } from "../context/UserAccessContext";
 import {
   FREE_PLAN_VEHICLE_LIMIT,
+  getFreePlanItemAccess,
   getGarageAccess,
 } from "../lib/accessControl";
 
@@ -244,11 +246,58 @@ export function Garage() {
 
   const garageAccess = getGarageAccess(currentUserAccess, vehicles.length);
 
+  const vehicleFallbackIds = [...vehicles]
+    .sort((a, b) => {
+      if (a.id === activeVehicleId) return -1;
+      if (b.id === activeVehicleId) return 1;
+
+      return (
+        new Date(b.updatedAt).getTime() -
+        new Date(a.updatedAt).getTime()
+      );
+    })
+    .map((vehicle) => vehicle.id);
+
+  const vehicleItemAccess = getFreePlanItemAccess({
+    user: currentUserAccess,
+    availableIds: vehicles.map((vehicle) => vehicle.id),
+    selectionKey: "vehicleIds",
+    limit: FREE_PLAN_VEHICLE_LIMIT,
+    fallbackIds: vehicleFallbackIds,
+  });
+
+  const unlockedVehicles = vehicles.filter((vehicle) =>
+    vehicleItemAccess.isItemUnlocked(vehicle.id)
+  );
+
+  const lockedVehicleCount = vehicleItemAccess.lockedIds.length;
+
   const isVehicleLimitReached = garageAccess.isVehicleLimitReached;
 
-  const garageVehicleLimitLabel = garageAccess.vehicleLimitLabel;
+  const garageVehicleLimitLabel = garageAccess.unlimited
+    ? garageAccess.vehicleLimitLabel
+    : `${unlockedVehicles.length}/${FREE_PLAN_VEHICLE_LIMIT}`;
+
+  const firstUnlockedVehicleId =
+    vehicleItemAccess.unlockedIds[0] ?? null;
+
+  const activeVehicleIsUnlocked =
+    activeVehicleId !== null &&
+    vehicleItemAccess.isItemUnlocked(activeVehicleId);
+
+  useEffect(() => {
+    if (!firstUnlockedVehicleId) return;
+    if (activeVehicleIsUnlocked) return;
+
+    setActiveVehicleId(firstUnlockedVehicleId);
+  }, [
+    activeVehicleIsUnlocked,
+    firstUnlockedVehicleId,
+    setActiveVehicleId,
+  ]);
 
   const newVehicleUsesHours = vehicleUsesEngineHours(newVehicle.type);
+
   const editVehicleUsesHours = vehicleUsesEngineHours(editVehicle.type);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -602,7 +651,7 @@ export function Garage() {
   const hasGarageFiltersActive =
     vehicleTypeFilter !== "all" || garageSort !== "active_first";
 
-  const garageVehicleInsights = vehicles.map((vehicle) => {
+  const garageVehicleInsights = unlockedVehicles.map((vehicle) => {
     const statuses = calculateMaintenanceStatuses(
       vehicle,
       getServicesForVehicle(vehicle.id)
@@ -621,9 +670,17 @@ export function Garage() {
     };
   });
 
-  const totalVehicles = vehicles.length;
-  const totalMiles = vehicles.reduce((sum, vehicle) => sum + vehicle.mileage, 0);
-  const totalHours = vehicles.reduce((sum, vehicle) => sum + vehicle.hours, 0);
+  const totalVehicles = unlockedVehicles.length;
+
+  const totalMiles = unlockedVehicles.reduce(
+    (sum, vehicle) => sum + vehicle.mileage,
+    0
+  );
+
+  const totalHours = unlockedVehicles.reduce(
+    (sum, vehicle) => sum + vehicle.hours,
+    0
+  );
 
   const serviceAttentionCount = garageVehicleInsights.filter(
     (item) => item.summary.overdueCount > 0 || item.summary.dueSoonCount > 0
@@ -644,11 +701,11 @@ export function Garage() {
         )
       : 0;
 
-  const highestKmVehicle = [...vehicles].sort(
+  const highestKmVehicle = [...unlockedVehicles].sort(
     (a, b) => (b.mileage ?? 0) - (a.mileage ?? 0)
   )[0];
 
-  const highestHourVehicle = [...vehicles].sort(
+  const highestHourVehicle = [...unlockedVehicles].sort(
     (a, b) => (b.hours ?? 0) - (a.hours ?? 0)
   )[0];
 
@@ -1018,21 +1075,37 @@ export function Garage() {
                 </div>
               </div>
 
-              {isVehicleLimitReached && (
-                <div className="mt-3 rounded-xl border border-orange-500/20 bg-orange-500/10 px-3 py-2">
+                            {lockedVehicleCount > 0 ? (
+                <div className="mt-3 rounded-xl border border-orange-500/20 bg-orange-500/10 px-3 py-3">
                   <p className="text-xs font-semibold text-orange-400">
-                    Free garage limit reached
+                    {lockedVehicleCount} vehicle
+                    {lockedVehicleCount === 1 ? "" : "s"} locked
                   </p>
-                  <p className="mt-1 text-xs text-neutral-400">
-                    Subscribe to add unlimited vehicles.
+
+                  <p className="mt-1 text-xs leading-5 text-neutral-400">
+                    Your extra vehicles remain safely stored. Choose which
+                    vehicles stay unlocked in Plan Review or subscribe to the
+                    Pro Plan.
                   </p>
                 </div>
+              ) : (
+                isVehicleLimitReached && (
+                  <div className="mt-3 rounded-xl border border-orange-500/20 bg-orange-500/10 px-3 py-2">
+                    <p className="text-xs font-semibold text-orange-400">
+                      Free garage limit reached
+                    </p>
+
+                    <p className="mt-1 text-xs text-neutral-400">
+                      Subscribe to add unlimited vehicles.
+                    </p>
+                  </div>
+                )
               )}
             </div>
           )}
 
           {/* Vehicle Comparison */}
-          {vehicles.length > 1 && (
+          {unlockedVehicles.length > 1 && (
             <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div>
@@ -1250,8 +1323,13 @@ export function Garage() {
           ) : (
             <div className="space-y-4">
               {visibleVehicles.map((vehicle) => {
-            const color = vehicle.color || "#ef4444";
-            const isActive = activeVehicleId === vehicle.id;
+                const color = vehicle.color || "#ef4444";
+
+                const isLocked =
+                  !vehicleItemAccess.isItemUnlocked(vehicle.id);
+
+                const isActive =
+                  !isLocked && activeVehicleId === vehicle.id;
 
             const vehicleMaintenanceStatuses = calculateMaintenanceStatuses(
               vehicle,
@@ -1268,16 +1346,70 @@ export function Garage() {
               const vehicleSetupCompletion = getGarageSetupCompletionScore(vehicle);
               const vehicleReadyStatus = getReadyStatus(vehicleMaintenanceSummary);
 
-              return (
+                            return (
                 <div
                   key={vehicle.id}
                   className={`relative overflow-hidden bg-neutral-900 border rounded-lg p-5 pt-6 transition-colors ${
-                    isActive ? "" : "border-neutral-800 hover:border-neutral-700"
+                    isActive
+                      ? ""
+                      : "border-neutral-800 hover:border-neutral-700"
                   }`}
                   style={{
                     borderColor: isActive ? color : undefined,
                   }}
                 >
+                  {isLocked && (
+                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-neutral-950/75 p-5 backdrop-blur-[1px]">
+                      <div className="max-w-[260px] text-center">
+                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-500/15">
+                          <Lock className="h-6 w-6 text-orange-400" />
+                        </div>
+
+                        <h3 className="mt-3 font-semibold text-white">
+                          Pro Plan required
+                        </h3>
+
+                        <p className="mt-1 text-xs leading-5 text-neutral-400">
+                          Choose this vehicle in Plan Review or subscribe to
+                          unlock your full Garage.
+                        </p>
+
+                        <div className="mt-4 grid grid-cols-1 gap-2">
+                          <Link to="/account/plan-review">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="w-full border-neutral-700 text-neutral-300"
+                            >
+                              Plan Review
+                            </Button>
+                          </Link>
+
+                          <Link to="/subscription">
+                            <Button
+                              type="button"
+                              className="w-full bg-orange-600 hover:bg-orange-700"
+                            >
+                              Subscribe Now
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div
+                    className={
+                      isLocked
+                        ? "pointer-events-none select-none blur-[2px] opacity-35"
+                        : ""
+                    }
+                    aria-hidden={isLocked}
+                  >
+                    <div
+                      className="absolute inset-x-0 top-0 h-1"
+                      style={{ backgroundColor: color }}
+                    />
                   <div
                     className="absolute inset-x-0 top-0 h-1"
                     style={{ backgroundColor: color }}
@@ -1531,8 +1663,9 @@ export function Garage() {
                     </div>
                   </div>
                 </div>
-               );
-            })}
+              </div>
+            );
+          })}
           </div>
         )}
         </div>

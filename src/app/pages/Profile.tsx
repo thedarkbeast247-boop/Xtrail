@@ -39,6 +39,9 @@ import {
 } from "../lib/accessControl";
 import { useNotification } from "../context/NotificationContext";
 
+const devToolsEnabled =
+  import.meta.env.DEV ||
+  import.meta.env.VITE_ENABLE_DEV_TOOLS === "true";
 
 export function Profile() {
   const { currentUserAccess, signOut } = useUserAccess();
@@ -307,7 +310,7 @@ export function Profile() {
                 </div>
               </Link>
             )}
-            {isOwnerAccount && (
+            {devToolsEnabled && (
               <Link to="/dev/access-tester">
                 <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-3 min-h-[108px] flex flex-col items-center justify-center
                   transition-all duration-200 hover:border-neutral-700 hover:bg-neutral-800/60 active:scale-95">

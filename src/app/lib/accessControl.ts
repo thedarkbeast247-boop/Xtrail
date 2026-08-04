@@ -1,10 +1,70 @@
-import type { FeatureKey, UserAccessProfile } from "../types/access";
+import type {
+  FeatureKey,
+  FreePlanSelections,
+  UserAccessProfile,
+} from "../types/access";
 
 export const FREE_PLAN_VEHICLE_LIMIT = 2;
 export const FREE_PLAN_TRAIL_VIEW_LIMIT = 5;
 export const FREE_PLAN_SAVED_TRAILS_LIMIT = 5;
 export const FREE_PLAN_RIDE_HISTORY_LIMIT = 5;
 export const FREE_PLAN_COMPLETED_TRAILS_LIMIT = 5;
+
+type FreePlanSelectionKey = keyof FreePlanSelections;
+
+type FreePlanItemAccessOptions = {
+  user: UserAccessProfile;
+  availableIds: string[];
+  selectionKey: FreePlanSelectionKey;
+  limit: number;
+  fallbackIds?: string[];
+};
+
+export function getFreePlanItemAccess({
+  user,
+  availableIds,
+  selectionKey,
+  limit,
+  fallbackIds = availableIds,
+}: FreePlanItemAccessOptions) {
+  const unlimited = hasFullAppAccess(user);
+  const availableIdSet = new Set(availableIds);
+
+  if (unlimited) {
+    return {
+      unlimited: true,
+      unlockedIds: [...availableIds],
+      lockedIds: [] as string[],
+      isItemUnlocked: (_itemId: string) => true,
+    };
+  }
+
+  const validSelectedIds = Array.from(
+    new Set(user.freePlanSelections[selectionKey])
+  )
+    .filter((id) => availableIdSet.has(id))
+    .slice(0, limit);
+
+  const selectedIdSet = new Set(validSelectedIds);
+
+  const validFallbackIds = Array.from(new Set(fallbackIds)).filter(
+    (id) => availableIdSet.has(id) && !selectedIdSet.has(id)
+  );
+
+  const unlockedIds = [...validSelectedIds, ...validFallbackIds].slice(
+    0,
+    limit
+  );
+
+  const unlockedIdSet = new Set(unlockedIds);
+
+  return {
+    unlimited: false,
+    unlockedIds,
+    lockedIds: availableIds.filter((id) => !unlockedIdSet.has(id)),
+    isItemUnlocked: (itemId: string) => unlockedIdSet.has(itemId),
+  };
+}
 
 export function isActiveAccount(user: UserAccessProfile) {
   return user.accountStatus === "active";

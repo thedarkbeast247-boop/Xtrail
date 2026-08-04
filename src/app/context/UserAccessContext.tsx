@@ -545,6 +545,27 @@ export function UserAccessProvider({ children }: { children: ReactNode }) {
     userId: string,
     selections: FreePlanSelections
   ) => {
+    const user = users.find((item) => item.id === userId);
+
+    if (!user) {
+      throw new Error("User does not exist.");
+    }
+
+    if (user.proAccessReviewStatus !== "needs_review") {
+      if (
+        user.proAccessReviewStatus === "reviewed" ||
+        user.proAccessReviewedAt
+      ) {
+        throw new Error(
+          "Your Free Plan selections are already locked. Subscribe to the Pro Plan to unlock all of your items."
+        );
+      }
+
+      throw new Error(
+        "Plan Review is not currently available for this account."
+      );
+    }
+
     updateUserAccess(userId, {
       freePlanSelections: selections,
       proAccessReviewStatus: "reviewed",

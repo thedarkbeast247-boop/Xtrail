@@ -99,6 +99,7 @@ function SelectionSection({
   selectedIds,
   onToggle,
   emptyText,
+  readOnly = false,
 }: {
   title: string;
   description: string;
@@ -108,6 +109,7 @@ function SelectionSection({
   selectedIds: string[];
   onToggle: (id: string) => void;
   emptyText: string;
+  readOnly?: boolean;
 }) {
   return (
     <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
@@ -121,6 +123,7 @@ function SelectionSection({
           <p className="mt-1 text-sm text-neutral-400">{description}</p>
           <p className="mt-2 text-xs text-orange-400">
             {selectedIds.length}/{limit} selected
+            {readOnly ? " • Selections locked" : ""}
           </p>
         </div>
       </div>
@@ -133,19 +136,29 @@ function SelectionSection({
         <div className="space-y-2">
           {items.map((item) => {
             const isSelected = selectedIds.includes(item.id);
-            const isDisabled = !isSelected && selectedIds.length >= limit;
+
+            const limitReached =
+              !isSelected && selectedIds.length >= limit;
+
+            const isDisabled = readOnly || limitReached;
 
             return (
               <button
                 key={item.id}
                 type="button"
                 disabled={isDisabled}
-                onClick={() => onToggle(item.id)}
+                onClick={() => {
+                  if (!readOnly) {
+                    onToggle(item.id);
+                  }
+                }}
                 className={`w-full rounded-xl border p-3 text-left transition ${
                   isSelected
                     ? "border-orange-500/50 bg-orange-500/10"
                     : "border-neutral-800 bg-neutral-950 hover:border-neutral-700"
-                } ${isDisabled ? "cursor-not-allowed opacity-50" : ""}`}
+                } ${
+                  limitReached ? "cursor-not-allowed opacity-50" : ""
+                } ${readOnly ? "cursor-default" : ""}`}
               >
                 <div className="flex items-start gap-3">
                   <div
@@ -333,10 +346,33 @@ export function PlanReview() {
       )
     : "Not scheduled yet";
 
-  const isProReviewNeeded =
-    currentUserAccess.proAccessReviewStatus !== "not_required";
+  const isReviewEditable =
+    currentUserAccess.proAccessReviewStatus === "needs_review";
+
+  const isReviewLocked =
+    currentUserAccess.proAccessReviewStatus === "reviewed";
+
+  const isProReviewActive =
+    isReviewEditable || isReviewLocked;
+
+  const reviewedAtText = currentUserAccess.proAccessReviewedAt
+    ? new Date(currentUserAccess.proAccessReviewedAt).toLocaleDateString(
+        "en-ZA"
+      )
+    : null;
 
   const handleSaveSelections = () => {
+    if (!isReviewEditable) {
+      showNotification({
+        title: "Selections already locked",
+        message:
+          "Your Free Plan choices cannot be changed. Subscribe to the Pro Plan to unlock all of your items.",
+        variant: "warning",
+      });
+
+      return;
+    }
+
     const selections: FreePlanSelections = {
       vehicleIds: selectedVehicleIds,
       savedTrailIds: selectedSavedTrailIds,
@@ -344,16 +380,27 @@ export function PlanReview() {
       completedTrailIds: selectedCompletedTrailIds,
     };
 
-    reviewFreePlanSelections(currentUserId, selections);
+    try {
+      reviewFreePlanSelections(currentUserId, selections);
 
-    showNotification({
-      title: "Free Plan selections saved",
-      message:
-        "Your selected items will stay unlocked. Extra Pro data will remain locked.",
-      variant: "success",
-    });
+      showNotification({
+        title: "Free Plan selections locked",
+        message:
+          "Your selected items will stay unlocked. Extra items remain safely stored and locked until Pro is active again.",
+        variant: "success",
+      });
 
-    navigate("/profile");
+      navigate("/profile");
+    } catch (error) {
+      showNotification({
+        title: "Could not save selections",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Something went wrong while saving your selections.",
+        variant: "error",
+      });
+    }
   };
 
   const handleRestorePro = () => {
@@ -396,22 +443,24 @@ export function PlanReview() {
       <div className="space-y-4 px-4 py-5">
         <div
           className={`rounded-2xl border p-4 ${
-            isProReviewNeeded
+            isProReviewActive
               ? "border-orange-500/20 bg-orange-500/10"
               : "border-neutral-800 bg-neutral-900"
           }`}
         >
           <p
             className={`text-sm font-semibold ${
-              isProReviewNeeded ? "text-orange-400" : "text-white"
+              isProReviewActive ? "text-orange-400" : "text-white"
             }`}
           >
-            {isProReviewNeeded
-              ? "Pro Plan is not active"
+            {isReviewEditable
+              ? "Choose your Free Plan items"
+              : isReviewLocked
+              ? "Free Plan selections locked"
               : "Plan review not required"}
           </p>
 
-          {isProReviewNeeded ? (
+          {isReviewEditable ? (
             <>
               <p className="mt-2 text-sm text-neutral-300">
                 Reason:{" "}
@@ -419,10 +468,27 @@ export function PlanReview() {
               </p>
 
               <p className="mt-2 text-xs leading-5 text-neutral-400">
-                Your extra data is still saved. Select the items you want to keep
-                unlocked on the Free Plan. Items not selected will be locked
-                until Pro is active again.
+                Your extra data is still saved. Choose carefully which items
+                stay unlocked. After confirming, these selections cannot be
+                changed unless the Pro Plan is restored.
               </p>
+
+              <p className="mt-2 text-xs text-neutral-500">
+                Locked extra data retention date: {deleteAfterText}
+              </p>
+            </>
+          ) : isReviewLocked ? (
+            <>
+              <p className="mt-2 text-xs leading-5 text-neutral-300">
+                Your selected Free Plan items are now fixed for this downgrade
+                period. Extra items remain safely stored but locked.
+              </p>
+
+              {reviewedAtText && (
+                <p className="mt-2 text-xs text-neutral-500">
+                  Selections confirmed on: {reviewedAtText}
+                </p>
+              )}
 
               <p className="mt-2 text-xs text-neutral-500">
                 Locked extra data retention date: {deleteAfterText}
@@ -430,8 +496,7 @@ export function PlanReview() {
             </>
           ) : (
             <p className="mt-2 text-xs leading-5 text-neutral-400">
-              You can still prepare Free Plan selections here. This will be used
-              later if Pro access ends or if the account is on the Free Plan.
+              This account does not currently need to choose Free Plan items.
             </p>
           )}
         </div>
@@ -449,6 +514,7 @@ export function PlanReview() {
             )
           }
           emptyText="No vehicles added yet."
+          readOnly={!isReviewEditable}
         />
 
         <SelectionSection
@@ -464,6 +530,7 @@ export function PlanReview() {
             )
           }
           emptyText="No saved trails yet."
+          readOnly={!isReviewEditable}
         />
 
         <SelectionSection
@@ -479,6 +546,7 @@ export function PlanReview() {
             )
           }
           emptyText="No ride history yet."
+          readOnly={!isReviewEditable}
         />
 
         <SelectionSection
@@ -494,6 +562,7 @@ export function PlanReview() {
             )
           }
           emptyText="No completed trails yet."
+          readOnly={!isReviewEditable}
         />
 
         <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
@@ -507,13 +576,32 @@ export function PlanReview() {
           </p>
 
           <div className="mt-4 grid grid-cols-1 gap-3">
-            <Button
-              type="button"
-              onClick={handleSaveSelections}
-              className="bg-orange-600 hover:bg-orange-700"
-            >
-              Save Free Plan Selections
-            </Button>
+            {isReviewEditable ? (
+              <Button
+                type="button"
+                onClick={handleSaveSelections}
+                className="bg-orange-600 hover:bg-orange-700"
+              >
+                Confirm and Lock Selections
+              </Button>
+            ) : isReviewLocked ? (
+              <div className="rounded-xl border border-neutral-700 bg-neutral-950 p-3">
+                <div className="flex items-start gap-3">
+                  <LockKeyhole className="mt-0.5 h-5 w-5 shrink-0 text-orange-400" />
+
+                  <div>
+                    <p className="text-sm font-semibold text-white">
+                      Selections locked
+                    </p>
+
+                    <p className="mt-1 text-xs leading-5 text-neutral-400">
+                      These choices cannot be changed while using the Free Plan.
+                      Subscribe to restore access to all of your items.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
 
             <Link to="/subscription">
               <Button
