@@ -279,19 +279,77 @@ export function PlanReview() {
   }, [savedRides]);
 
   const completedTrailItems = useMemo<SelectableItem[]>(() => {
-    return [...completedTrails]
+    const groupedByTrailId = new Map<string, CompletedTrail[]>();
+
+    for (const completedTrail of completedTrails) {
+      const existingRecords =
+        groupedByTrailId.get(completedTrail.trailId) ?? [];
+
+      existingRecords.push(completedTrail);
+      groupedByTrailId.set(completedTrail.trailId, existingRecords);
+    }
+
+    return Array.from(groupedByTrailId.values())
+      .map((records) => {
+        const sortedRecords = [...records].sort(
+          (a, b) =>
+            new Date(b.completedAt).getTime() -
+            new Date(a.completedAt).getTime()
+        );
+
+        const latestRecord = sortedRecords[0];
+
+        return {
+          id: latestRecord.trailId,
+          title: latestRecord.trailName,
+          subtitle: `Last completed ${new Date(
+            latestRecord.completedAt
+          ).toLocaleDateString("en-ZA")}`,
+          meta: `${records.length} completion${
+            records.length === 1 ? "" : "s"
+          }`,
+          latestCompletedAt: latestRecord.completedAt,
+        };
+      })
       .sort(
         (a, b) =>
-          new Date(b.completedAt).getTime() -
-          new Date(a.completedAt).getTime()
+          new Date(b.latestCompletedAt).getTime() -
+          new Date(a.latestCompletedAt).getTime()
       )
-      .map((trail) => ({
-        id: trail.id,
-        title: trail.trailName,
-        subtitle: new Date(trail.completedAt).toLocaleDateString("en-ZA"),
-        meta: "Completed trail",
-      }));
+      .map(({ latestCompletedAt: _latestCompletedAt, ...item }) => item);
   }, [completedTrails]);
+
+  const normalizedExistingCompletedTrailIds = useMemo(() => {
+    const availableTrailIds = new Set(
+      completedTrailItems.map((item) => item.id)
+    );
+
+    const trailIdByCompletionRecordId = new Map(
+      completedTrails.map((completedTrail) => [
+        completedTrail.id,
+        completedTrail.trailId,
+      ])
+    );
+
+    const normalizedIds =
+      currentUserAccess.freePlanSelections.completedTrailIds.map(
+        (storedId) => {
+          if (availableTrailIds.has(storedId)) {
+            return storedId;
+          }
+
+          return trailIdByCompletionRecordId.get(storedId) ?? storedId;
+        }
+      );
+
+    return Array.from(new Set(normalizedIds)).filter((trailId) =>
+      availableTrailIds.has(trailId)
+    );
+  }, [
+    completedTrailItems,
+    completedTrails,
+    currentUserAccess.freePlanSelections.completedTrailIds,
+  ]);
 
   useEffect(() => {
     setSelectedVehicleIds(
@@ -320,17 +378,17 @@ export function PlanReview() {
 
     setSelectedCompletedTrailIds(
       getSelectedOrDefault(
-        currentUserAccess.freePlanSelections.completedTrailIds,
+        normalizedExistingCompletedTrailIds,
         completedTrailItems.map((item) => item.id),
         FREE_PLAN_COMPLETED_TRAILS_LIMIT
       )
     );
   }, [
     completedTrailItems,
-    currentUserAccess.freePlanSelections.completedTrailIds,
     currentUserAccess.freePlanSelections.rideIds,
     currentUserAccess.freePlanSelections.savedTrailIds,
     currentUserAccess.freePlanSelections.vehicleIds,
+    normalizedExistingCompletedTrailIds,
     rideItems,
     savedTrailItems,
     vehicleItems,
@@ -377,7 +435,9 @@ export function PlanReview() {
       vehicleIds: selectedVehicleIds,
       savedTrailIds: selectedSavedTrailIds,
       rideIds: selectedRideIds,
-      completedTrailIds: selectedCompletedTrailIds,
+      completedTrailIds: Array.from(
+        new Set(selectedCompletedTrailIds)
+      ).slice(0, FREE_PLAN_COMPLETED_TRAILS_LIMIT),
     };
 
     try {
@@ -440,7 +500,7 @@ export function PlanReview() {
         </div>
       </div>
 
-      <div className="space-y-4 px-4 py-5">
+      <div className="space-y-4 px-4 pt-5 pb-32">
         <div
           className={`rounded-2xl border p-4 ${
             isProReviewActive
@@ -551,7 +611,7 @@ export function PlanReview() {
 
         <SelectionSection
           title="Completed Trails"
-          description={`Select ${FREE_PLAN_COMPLETED_TRAILS_LIMIT} completed trails to keep unlocked.`}
+          description={`Select ${FREE_PLAN_COMPLETED_TRAILS_LIMIT} unique completed trails to keep unlocked.`}
           limit={FREE_PLAN_COMPLETED_TRAILS_LIMIT}
           icon={<Clock className="h-5 w-5" />}
           items={completedTrailItems}

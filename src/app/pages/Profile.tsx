@@ -10,7 +10,6 @@ import {
   Calendar,
   Crown,
   Plus,
-  MapPin,
   Wrench,
   Users,
   BarChart3,
@@ -27,13 +26,18 @@ import { Button } from "../components/ui/button";
 import { useVehicles } from "../context/VehicleContext";
 import { useServices } from "../context/ServiceContext";
 import { calculateMaintenanceStatuses } from "../lib/maintenance";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { getRideStats, formatRideDuration, type SavedRide } from "../utils/rideStats";
 import { type CompletedTrail } from "../types/completedTrail";
 import { type SavedTrail } from "../types/savedTrail";
 import { useUserAccess } from "../context/UserAccessContext";
 import {
   canAccessAdminArea,
+  FREE_PLAN_COMPLETED_TRAILS_LIMIT,
+  FREE_PLAN_RIDE_HISTORY_LIMIT,
+  FREE_PLAN_SAVED_TRAILS_LIMIT,
+  FREE_PLAN_VEHICLE_LIMIT,
+  getFreePlanItemAccess,
   getPublicPlanLabel,
   isGlobalAdmin,
 } from "../lib/accessControl";
@@ -49,11 +53,138 @@ export function Profile() {
   const canOpenAdminArea = canAccessAdminArea(currentUserAccess);
   const isOwnerAccount = isGlobalAdmin(currentUserAccess);
 
-  const { vehicles, activeVehicle, setActiveVehicleId } = useVehicles();
+  const {
+    vehicles,
+    activeVehicle: storedActiveVehicle,
+    setActiveVehicleId,
+  } = useVehicles();
+
   const { getServicesForVehicle } = useServices();
   const [savedRides, setSavedRides] = useState<SavedRide[]>([]);
   const [completedTrails, setCompletedTrails] = useState<CompletedTrail[]>([]);
   const [savedTrails, setSavedTrails] = useState<SavedTrail[]>([]);
+
+  const vehicleFallbackIds = [...vehicles]
+    .sort((a, b) => {
+      if (a.id === storedActiveVehicle?.id) return -1;
+      if (b.id === storedActiveVehicle?.id) return 1;
+
+      return (
+        new Date(b.updatedAt).getTime() -
+        new Date(a.updatedAt).getTime()
+      );
+    })
+    .map((vehicle) => vehicle.id);
+
+  const vehicleItemAccess = getFreePlanItemAccess({
+    user: currentUserAccess,
+    availableIds: vehicles.map((vehicle) => vehicle.id),
+    selectionKey: "vehicleIds",
+    limit: FREE_PLAN_VEHICLE_LIMIT,
+    fallbackIds: vehicleFallbackIds,
+  });
+
+  const unlockedVehicles = vehicles.filter((vehicle) =>
+    vehicleItemAccess.isItemUnlocked(vehicle.id)
+  );
+
+  const activeVehicle =
+    unlockedVehicles.find(
+      (vehicle) => vehicle.id === storedActiveVehicle?.id
+    ) ??
+    unlockedVehicles[0] ??
+    null;
+
+  const rideFallbackIds = [...savedRides]
+    .sort(
+      (a, b) =>
+        new Date(b.finishedAt).getTime() -
+        new Date(a.finishedAt).getTime()
+    )
+    .map((ride) => ride.id);
+
+  const rideItemAccess = getFreePlanItemAccess({
+    user: currentUserAccess,
+    availableIds: savedRides.map((ride) => ride.id),
+    selectionKey: "rideIds",
+    limit: FREE_PLAN_RIDE_HISTORY_LIMIT,
+    fallbackIds: rideFallbackIds,
+  });
+
+  const unlockedRides = savedRides.filter((ride) =>
+    rideItemAccess.isItemUnlocked(ride.id)
+  );
+
+  const recentUnlockedRides = [...unlockedRides].sort(
+    (a, b) =>
+      new Date(b.finishedAt).getTime() -
+      new Date(a.finishedAt).getTime()
+  );
+
+  const savedTrailItemAccess = getFreePlanItemAccess({
+    user: currentUserAccess,
+    availableIds: savedTrails.map((trail) => trail.id),
+    selectionKey: "savedTrailIds",
+    limit: FREE_PLAN_SAVED_TRAILS_LIMIT,
+    fallbackIds: savedTrails.map((trail) => trail.id),
+  });
+
+  const unlockedSavedTrails = savedTrails.filter((trail) =>
+    savedTrailItemAccess.isItemUnlocked(trail.id)
+  );
+
+  const completedTrailFallbackIds = Array.from(
+    new Set(
+      [...completedTrails]
+        .sort(
+          (a, b) =>
+            new Date(b.completedAt).getTime() -
+            new Date(a.completedAt).getTime()
+        )
+        .map((completedTrail) => completedTrail.trailId)
+    )
+  );
+
+  const availableCompletedTrailIdSet = new Set(
+    completedTrailFallbackIds
+  );
+
+  const completedTrailIdByRecordId = new Map(
+    completedTrails.map((completedTrail) => [
+      completedTrail.id,
+      completedTrail.trailId,
+    ])
+  );
+
+  const normalizedCompletedTrailSelectionIds = Array.from(
+    new Set(
+      currentUserAccess.freePlanSelections.completedTrailIds
+        .map((storedId) => {
+          if (availableCompletedTrailIdSet.has(storedId)) {
+            return storedId;
+          }
+
+          return completedTrailIdByRecordId.get(storedId);
+        })
+        .filter((trailId): trailId is string => Boolean(trailId))
+    )
+  );
+
+  const completedTrailAccessUser = {
+    ...currentUserAccess,
+    freePlanSelections: {
+      ...currentUserAccess.freePlanSelections,
+      completedTrailIds: normalizedCompletedTrailSelectionIds,
+    },
+  };
+
+  const completedTrailItemAccess = getFreePlanItemAccess({
+    user: completedTrailAccessUser,
+    availableIds: completedTrailFallbackIds,
+    selectionKey: "completedTrailIds",
+    limit: FREE_PLAN_COMPLETED_TRAILS_LIMIT,
+    fallbackIds: completedTrailFallbackIds,
+  });
 
   useEffect(() => {
     const storedRides = localStorage.getItem("xtrail-saved-rides");
@@ -106,17 +237,21 @@ export function Profile() {
     }
   }, []);
 
-  const rideStats = useMemo(() => {
-    return getRideStats(savedRides);
-  }, [savedRides]);
+  useEffect(() => {
+    if (!activeVehicle) return;
+    if (storedActiveVehicle?.id === activeVehicle.id) return;
 
-  const uniqueCompletedTrailsCount = useMemo(() => {
-    const uniqueTrailIds = new Set(
-      completedTrails.map((trail) => trail.trailId)
-    );
+    setActiveVehicleId(activeVehicle.id);
+  }, [
+    activeVehicle?.id,
+    setActiveVehicleId,
+    storedActiveVehicle?.id,
+  ]);
 
-    return uniqueTrailIds.size;
-  }, [completedTrails]);
+  const rideStats = getRideStats(unlockedRides);
+
+  const uniqueCompletedTrailsCount =
+  completedTrailItemAccess.unlockedIds.length;
 
   const maintenanceProfile = activeVehicle
   ? getMaintenanceProfile(activeVehicle.type)
@@ -354,7 +489,7 @@ export function Profile() {
             </Link>
           </div>
 
-          {vehicles.length === 0 ? (
+          {unlockedVehicles.length === 0 ? (
             <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 text-center">
               <p className="text-neutral-400 text-sm mb-4">
                 No vehicles added yet.
@@ -368,7 +503,7 @@ export function Profile() {
           ) : (
             <>
               <div className="flex gap-2 overflow-x-auto pb-2">
-                {vehicles.map((vehicle) => {
+                {unlockedVehicles.map((vehicle) => {
                   const isActive = activeVehicle?.id === vehicle.id;
 
                   return (
@@ -459,7 +594,7 @@ export function Profile() {
                   <div>
                     <h2 className="text-white mb-3 mt-6">Stats</h2>
                     
-                    {savedRides.length === 0 ? (
+                    {unlockedRides.length === 0 ? (
                       <div className="mb-4 bg-neutral-900 border border-neutral-800 rounded-lg p-4 text-sm text-neutral-400">
                         No saved rides yet. Complete a trail ride and save it to start building your stats.
                       </div>
@@ -703,7 +838,7 @@ export function Profile() {
             <div>
               <h3 className="text-lg font-semibold text-white">Recent Rides</h3>
               <p className="mt-1 text-sm text-neutral-400">
-                Your latest saved rides from Xtrail.
+                Your latest saved rides from XTrail.
               </p>
             </div>
 
@@ -718,13 +853,13 @@ export function Profile() {
             </Link>
           </div>
 
-          {savedRides.length === 0 ? (
+          {unlockedRides.length === 0 ? (
             <div className="rounded-2xl bg-neutral-800/60 p-4 text-sm text-neutral-400">
               No saved rides yet. Start a trail and save your first ride.
             </div>
           ) : (
             <div className="space-y-3">
-              {savedRides.slice(0, 3).map((ride) => (
+              {recentUnlockedRides.slice(0, 3).map((ride) => (
                 <div
                   key={ride.id}
                   className="rounded-2xl bg-neutral-800/70 p-4"
@@ -792,13 +927,13 @@ export function Profile() {
             </Link>
           </div>
 
-          {savedTrails.length === 0 ? (
+          {unlockedSavedTrails.length === 0 ? (
             <div className="rounded-2xl bg-neutral-800/60 p-4 text-sm text-neutral-400">
               No saved trails yet. Save trails from the trail detail page.
             </div>
           ) : (
             <div className="space-y-3">
-              {savedTrails.slice(0, 3).map((savedTrail) => (
+              {unlockedSavedTrails.slice(0, 3).map((savedTrail) => (
                 <Link
                   key={savedTrail.id}
                   to={`/trail/${savedTrail.trailId}`}

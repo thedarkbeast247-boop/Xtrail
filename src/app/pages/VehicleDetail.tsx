@@ -31,12 +31,17 @@ import { getVehicleSetupConfig } from "../utils/vehicleSetupConfig";
 import { useVehicles } from "../context/VehicleContext";
 import { useServices } from "../context/ServiceContext";
 import { useNotification } from "../context/NotificationContext";
+import { useUserAccess } from "../context/UserAccessContext";
 import { mockTrails } from "../data/mockData";
 import type { SavedRide } from "../utils/rideStats";
 import {
   calculateMaintenanceStatuses,
   type MaintenanceTaskStatus,
 } from "../lib/maintenance";
+import {
+  FREE_PLAN_VEHICLE_LIMIT,
+  getFreePlanItemAccess,
+} from "../lib/accessControl";
 
 const maintenanceStatusOrder = {
   overdue: 0,
@@ -429,6 +434,7 @@ const emptySetupProfile: VehicleSetupProfile = {
 
 export function VehicleDetail() {
   const { showNotification } = useNotification();
+  const { currentUserAccess } = useUserAccess();
   const { vehicleId } = useParams();
   const { vehicles, activeVehicleId, updateVehicle } = useVehicles();
   const { getServicesForVehicle } = useServices();
@@ -516,7 +522,33 @@ export function VehicleDetail() {
   const setupConfig = getVehicleSetupConfig(editVehicle.type);
 
   const vehicle = vehicles.find((v) => v.id === vehicleId);
-  const isActiveVehicle = vehicle?.id === activeVehicleId;
+
+  const vehicleFallbackIds = [...vehicles]
+    .sort((a, b) => {
+      if (a.id === activeVehicleId) return -1;
+      if (b.id === activeVehicleId) return 1;
+
+      return (
+        new Date(b.updatedAt).getTime() -
+        new Date(a.updatedAt).getTime()
+      );
+    })
+    .map((item) => item.id);
+
+  const vehicleItemAccess = getFreePlanItemAccess({
+    user: currentUserAccess,
+    availableIds: vehicles.map((item) => item.id),
+    selectionKey: "vehicleIds",
+    limit: FREE_PLAN_VEHICLE_LIMIT,
+    fallbackIds: vehicleFallbackIds,
+  });
+
+  const isVehicleLocked = vehicle
+    ? !vehicleItemAccess.isItemUnlocked(vehicle.id)
+    : false;
+
+  const isActiveVehicle =
+    !isVehicleLocked && vehicle?.id === activeVehicleId;
   const handleOpenEditVehicle = () => {
     if (!vehicle) return;
 
@@ -1363,7 +1395,13 @@ export function VehicleDetail() {
   const unlockedAchievementSignature = unlockedAchievementIds.join("|");
 
   useEffect(() => {
-    if (!vehicle?.id || unlockedAchievementIds.length === 0) return;
+    if (
+      isVehicleLocked ||
+      !vehicle?.id ||
+      unlockedAchievementIds.length === 0
+    ) {
+      return;
+    }
 
     const storageKey = `xtrail-seen-achievements-${vehicle.id}`;
     const storedSeenAchievements = localStorage.getItem(storageKey);
@@ -1401,10 +1439,77 @@ export function VehicleDetail() {
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [vehicle?.id, unlockedAchievementSignature]);
+  }, [
+    isVehicleLocked,
+    vehicle?.id,
+    unlockedAchievementSignature,
+  ]);
 
   if (!vehicle) {
     return <div className="p-4 text-white">Vehicle not found</div>;
+  }
+
+  if (isVehicleLocked) {
+    return (
+      <div className="min-h-full bg-neutral-950 px-4 py-6 text-white">
+        <Link
+          to="/garage"
+          className="inline-flex items-center gap-2 text-sm text-neutral-400 transition hover:text-white"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Garage
+        </Link>
+
+        <div className="mt-6 rounded-3xl border border-orange-500/20 bg-neutral-900 p-6 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-500/15">
+            <Lock className="h-8 w-8 text-orange-400" />
+          </div>
+
+          <p className="mt-5 text-xs font-semibold uppercase tracking-[0.2em] text-orange-400">
+            Free Plan Garage
+          </p>
+
+          <h1 className="mt-2 text-2xl font-bold">
+            Pro Plan required
+          </h1>
+
+          <p className="mt-3 text-sm leading-6 text-neutral-400">
+            {vehicle.name} is still safely stored in your Garage, but it
+            is not one of the vehicles you selected to keep unlocked on
+            the Free Plan.
+          </p>
+
+          <p className="mt-3 text-xs leading-5 text-neutral-500">
+            Your Free Plan choices are fixed for this downgrade period.
+            Subscribe to restore access to your complete Garage.
+          </p>
+
+          <div className="mt-6 grid gap-3">
+            <Link
+              to="/subscription"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 text-sm font-semibold text-white transition hover:bg-orange-700"
+            >
+              <Crown className="h-4 w-4" />
+              Subscribe Now
+            </Link>
+
+            <Link
+              to="/account/plan-review"
+              className="inline-flex h-11 items-center justify-center rounded-xl border border-neutral-700 px-4 text-sm font-semibold text-neutral-300 transition hover:bg-neutral-800"
+            >
+              View Plan Review
+            </Link>
+
+            <Link
+              to="/garage"
+              className="inline-flex h-11 items-center justify-center rounded-xl border border-neutral-800 px-4 text-sm font-semibold text-neutral-400 transition hover:bg-neutral-900 hover:text-white"
+            >
+              Back to Garage
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
