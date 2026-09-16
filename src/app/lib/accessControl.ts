@@ -222,6 +222,38 @@ export function getTrailDiscoveryAccess(
   };
 }
 
+export function getTrailDiscoveryItemAccess(
+  user: UserAccessProfile,
+  areaTrailIds: string[]
+) {
+  const unlimited = canAccessFeature(
+    user,
+    "trail_discovery_unlimited"
+  );
+
+  const uniqueAreaTrailIds = Array.from(new Set(areaTrailIds));
+
+  const unlockedIds = unlimited
+    ? uniqueAreaTrailIds
+    : uniqueAreaTrailIds.slice(0, FREE_PLAN_TRAIL_VIEW_LIMIT);
+
+  const unlockedIdSet = new Set(unlockedIds);
+
+  const lockedIds = unlimited
+    ? []
+    : uniqueAreaTrailIds.filter(
+        (trailId) => !unlockedIdSet.has(trailId)
+      );
+
+  return {
+    unlimited,
+    unlockedIds,
+    lockedIds,
+    isItemUnlocked: (trailId: string) =>
+      unlimited || unlockedIdSet.has(trailId),
+  };
+}
+
 export function getSavedTrailsAccess(
   user: UserAccessProfile,
   currentSavedTrailCount: number

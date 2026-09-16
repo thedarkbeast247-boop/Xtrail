@@ -12,14 +12,15 @@ import {
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { useUserAccess } from "../context/UserAccessContext";
+import { useNotification } from "../context/NotificationContext";
 import { getPublicPlanLabel } from "../lib/accessControl";
 
 const freeFeatures = [
-  "View 5 trails in your selected area",
+  "View up to 5 trails in your selected area",
   "Add up to 2 garage vehicles",
-  "View 5 saved trails",
-  "View 5 ride history entries",
-  "View 5 completed trails",
+  "View up to 5 saved trails",
+  "View up to 5 ride history entries",
+  "View up to 5 unique completed trails",
   "Basic ride recording",
   "Basic profile and quick access",
 ];
@@ -32,7 +33,6 @@ const proFeatures = [
   "Unlimited completed trails",
   "Progress Dashboard access",
   "Full groups and group ride planning",
-  "Vehicle health and service insights",
   "Advanced ride stats and long-term tracking",
 ];
 
@@ -46,8 +46,20 @@ const futureProFeatures = [
 
 export function Subscription() {
   const { currentUserAccess } = useUserAccess();
+  const { showNotification } = useNotification();
   const currentPlanLabel = getPublicPlanLabel(currentUserAccess);
   const isProPlan = currentPlanLabel === "Pro Plan";
+
+  const handleSubscribe = () => {
+    if (isProPlan) return;
+
+    showNotification({
+      title: "Subscriptions coming soon",
+      message:
+        "Pro billing is not connected yet. Your current plan has not been changed.",
+      variant: "info",
+    });
+  };
 
   return (
     <div className="min-h-full bg-neutral-950">
@@ -112,11 +124,12 @@ export function Subscription() {
           </div>
 
           <Button
+            type="button"
             variant="outline"
             className="mt-6 w-full border-neutral-700 text-neutral-300"
-            disabled={!isProPlan}
+            disabled
           >
-            {isProPlan ? "Available as free access" : "Current Plan"}
+            {isProPlan ? "Free Plan" : "Current Plan"}
           </Button>
         </div>
 
@@ -146,7 +159,12 @@ export function Subscription() {
             ))}
           </div>
 
-          <Button className="mt-6 h-12 w-full bg-orange-600 text-base hover:bg-orange-700">
+          <Button
+            type="button"
+            onClick={handleSubscribe}
+            disabled={isProPlan}
+            className="mt-6 h-12 w-full bg-orange-600 text-base hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
             <Crown className="mr-2 h-5 w-5" />
             {isProPlan ? "Pro Plan Active" : "Subscribe Now"}
           </Button>
@@ -161,13 +179,17 @@ export function Subscription() {
 
           <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4 text-center">
             <Gauge className="mx-auto mb-2 h-7 w-7 text-orange-400" />
-            <p className="text-sm font-semibold text-white">Ride stats</p>
+            <p className="text-sm font-semibold text-white">
+              Advanced ride stats
+            </p>
             <p className="mt-1 text-xs text-neutral-500">Pro Plan</p>
           </div>
 
           <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4 text-center">
             <Wrench className="mx-auto mb-2 h-7 w-7 text-orange-400" />
-            <p className="text-sm font-semibold text-white">Garage insights</p>
+            <p className="text-sm font-semibold text-white">
+              Unlimited garage
+            </p>
             <p className="mt-1 text-xs text-neutral-500">Pro Plan</p>
           </div>
 

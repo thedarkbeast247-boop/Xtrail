@@ -1,37 +1,87 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
-import { ArrowLeft, Calendar, Clock, Map, Hash, Car, Share2, Trash2, Image as ImageIcon, Route } from "lucide-react";
+import {
+  ArrowLeft,
+  Calendar,
+  Clock,
+  Map,
+  Hash,
+  Car,
+  Share2,
+  Trash2,
+  Image as ImageIcon,
+  Route,
+  LockKeyhole,
+} from "lucide-react";
 import { Button } from "../components/ui/button";
 import { type RideImage, type SavedRide } from "../utils/rideStats";
 import { useNotification } from "../context/NotificationContext";
+import { useUserAccess } from "../context/UserAccessContext";
+import {
+  FREE_PLAN_RIDE_HISTORY_LIMIT,
+  getFreePlanItemAccess,
+} from "../lib/accessControl";
 
 export function RideDetail() {
-    const { showNotification } = useNotification();
+  const { showNotification } = useNotification();
+  const { currentUserAccess } = useUserAccess();
   const { rideId } = useParams();
+
   const [ride, setRide] = useState<SavedRide | null>(null);
+  const [isRideLocked, setIsRideLocked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
 
-  useEffect(() => {
+    useEffect(() => {
+    setIsLoading(true);
+
     const storedRides = localStorage.getItem("xtrail-saved-rides");
 
     if (!storedRides) {
       setRide(null);
+      setIsRideLocked(false);
       setIsLoading(false);
       return;
     }
 
     try {
       const parsed = JSON.parse(storedRides) as SavedRide[];
-      const foundRide = parsed.find((item) => item.id === rideId) ?? null;
+
+      const rideFallbackIds = [...parsed]
+        .sort(
+          (a, b) =>
+            new Date(b.finishedAt).getTime() -
+            new Date(a.finishedAt).getTime()
+        )
+        .map((savedRide) => savedRide.id);
+
+      const rideItemAccess = getFreePlanItemAccess({
+        user: currentUserAccess,
+        availableIds: parsed.map((savedRide) => savedRide.id),
+        selectionKey: "rideIds",
+        limit: FREE_PLAN_RIDE_HISTORY_LIMIT,
+        fallbackIds: rideFallbackIds,
+      });
+
+      const foundRide =
+        parsed.find((savedRide) => savedRide.id === rideId) ?? null;
+
+      if (!foundRide) {
+        setRide(null);
+        setIsRideLocked(false);
+        return;
+      }
+
       setRide(foundRide);
+      setIsRideLocked(!rideItemAccess.isItemUnlocked(foundRide.id));
     } catch (error) {
       console.error("Failed to load ride details:", error);
       setRide(null);
+      setIsRideLocked(false);
     } finally {
       setIsLoading(false);
     }
-  }, [rideId]);
+  }, [rideId, currentUserAccess]);
 
   const formatRideDate = (isoDate: string) => {
     return new Date(isoDate).toLocaleDateString("en-US", {
@@ -171,6 +221,78 @@ export function RideDetail() {
     return (
       <div className="min-h-full bg-neutral-950 px-4 py-6 text-neutral-400">
         Loading ride details...
+      </div>
+    );
+  }
+
+    if (ride && isRideLocked) {
+    return (
+      <div className="min-h-full bg-neutral-950">
+        <div className="border-b border-neutral-800 bg-gradient-to-b from-neutral-900 to-neutral-950 px-4 py-4">
+          <div className="flex items-center gap-3">
+            <Link to="/ride-history">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-neutral-400 hover:text-white"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </Link>
+
+            <div>
+              <h1 className="text-xl font-semibold text-white">
+                Ride Details
+              </h1>
+              <p className="text-sm text-neutral-400">
+                Free Plan ride history
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-4 py-6">
+          <div className="rounded-3xl border border-orange-500/20 bg-neutral-900 p-6 text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-500/15">
+              <LockKeyhole className="h-8 w-8 text-orange-400" />
+            </div>
+
+            <p className="mt-5 text-xs font-semibold uppercase tracking-[0.2em] text-orange-400">
+              Free Plan Ride History
+            </p>
+
+            <h1 className="mt-2 text-2xl font-bold text-white">
+              Pro Plan required
+            </h1>
+
+            <p className="mt-3 text-sm leading-6 text-neutral-400">
+              This ride is still safely stored in your Ride History, but it
+              is not one of the rides currently unlocked on the Free Plan.
+            </p>
+
+            <p className="mt-3 text-xs leading-5 text-neutral-500">
+              Subscribe to the Pro Plan to restore access to your complete
+              ride history.
+            </p>
+
+            <div className="mt-6 flex flex-col gap-3">
+              <Link to="/subscription">
+                <Button className="w-full bg-orange-600 hover:bg-orange-700">
+                  Subscribe Now
+                </Button>
+              </Link>
+
+              <Link to="/ride-history">
+                <Button
+                  variant="outline"
+                  className="w-full border-neutral-700 text-neutral-300 hover:bg-neutral-800"
+                >
+                  Back to Ride History
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

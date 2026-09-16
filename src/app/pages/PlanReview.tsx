@@ -67,15 +67,25 @@ function getSelectedOrDefault(
   defaultIds: string[],
   limit: number
 ) {
-  const validExistingSelection = existingSelection.filter((id) =>
-    defaultIds.includes(id)
-  );
+  const availableIdSet = new Set(defaultIds);
 
-  if (validExistingSelection.length > 0) {
-    return validExistingSelection.slice(0, limit);
+  const selectedIds = Array.from(
+    new Set(existingSelection)
+  )
+    .filter((id) => availableIdSet.has(id))
+    .slice(0, limit);
+
+  for (const defaultId of defaultIds) {
+    if (selectedIds.length >= limit) {
+      break;
+    }
+
+    if (!selectedIds.includes(defaultId)) {
+      selectedIds.push(defaultId);
+    }
   }
 
-  return defaultIds.slice(0, limit);
+  return selectedIds;
 }
 
 function toggleSelection(selectedIds: string[], id: string, limit: number) {
@@ -419,12 +429,50 @@ export function PlanReview() {
       )
     : null;
 
+  const requiredVehicleSelectionCount = Math.min(
+    FREE_PLAN_VEHICLE_LIMIT,
+    vehicleItems.length
+  );
+
+  const requiredSavedTrailSelectionCount = Math.min(
+    FREE_PLAN_SAVED_TRAILS_LIMIT,
+    savedTrailItems.length
+  );
+
+  const requiredRideSelectionCount = Math.min(
+    FREE_PLAN_RIDE_HISTORY_LIMIT,
+    rideItems.length
+  );
+
+  const requiredCompletedTrailSelectionCount = Math.min(
+    FREE_PLAN_COMPLETED_TRAILS_LIMIT,
+    completedTrailItems.length
+  );
+
+  const selectionsComplete =
+    selectedVehicleIds.length === requiredVehicleSelectionCount &&
+    selectedSavedTrailIds.length === requiredSavedTrailSelectionCount &&
+    selectedRideIds.length === requiredRideSelectionCount &&
+    selectedCompletedTrailIds.length ===
+      requiredCompletedTrailSelectionCount;
+
   const handleSaveSelections = () => {
     if (!isReviewEditable) {
       showNotification({
         title: "Selections already locked",
         message:
           "Your Free Plan choices cannot be changed. Subscribe to the Pro Plan to unlock all of your items.",
+        variant: "warning",
+      });
+
+      return;
+    }
+
+    if (!selectionsComplete) {
+      showNotification({
+        title: "Complete your selections",
+        message:
+          "Select all available items up to each Free Plan limit before confirming your choices.",
         variant: "warning",
       });
 

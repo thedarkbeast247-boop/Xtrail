@@ -16,6 +16,13 @@ import { useNotification } from "../context/NotificationContext";
 import { useUserAccess } from "../context/UserAccessContext";
 import { isGlobalAdmin } from "../lib/accessControl";
 
+import {
+  clearDurableVehicles,
+  getVehiclesExportValue,
+  replaceVehiclesFromExport,
+  VEHICLES_KEY,
+} from "../lib/storage";
+
 interface XTrailDataExport {
   app: "xtrail";
   version: 1;
@@ -45,12 +52,17 @@ function getXTrailStorageSnapshot(): Record<string, string> {
   return snapshot;
 }
 
-function buildExportPayload(): XTrailDataExport {
+async function buildExportPayload(): Promise<XTrailDataExport> {
+  const storage = getXTrailStorageSnapshot();
+
+  storage[VEHICLES_KEY] =
+    await getVehiclesExportValue();
+
   return {
     app: "xtrail",
     version: 1,
     exportedAt: new Date().toISOString(),
-    storage: getXTrailStorageSnapshot(),
+    storage,
   };
 }
 
@@ -89,8 +101,24 @@ export function DevDataTransfer() {
 
   const currentStorageCount = Object.keys(getXTrailStorageSnapshot()).length;
 
-  const handleCreateExport = () => {
-    const payload = buildExportPayload();
+  const ensureOwnerAccess = () => {
+    if (canUseDataTransfer) {
+      return true;
+    }
+
+    showNotification({
+      title: "Access denied",
+      message:
+        "Data Transfer is restricted to the XTrail owner account.",
+      variant: "error",
+    });
+
+    return false;
+  };
+
+  const handleCreateExport = async () => {
+    if (!ensureOwnerAccess()) return;
+    const payload = await buildExportPayload();
     const text = JSON.stringify(payload, null, 2);
 
     setExportText(text);
@@ -106,10 +134,19 @@ export function DevDataTransfer() {
   };
 
   const handleCopyExport = async () => {
-    const payloadText =
-      exportText || JSON.stringify(buildExportPayload(), null, 2);
+    if (!ensureOwnerAccess()) return;
+
+    const payload = await buildExportPayload();
+    const payloadText = JSON.stringify(
+      payload,
+      null,
+      2
+    );
 
     setExportText(payloadText);
+    setLastExportKeyCount(
+      Object.keys(payload.storage).length
+    );
 
     try {
       await navigator.clipboard.writeText(payloadText);
@@ -131,11 +168,21 @@ export function DevDataTransfer() {
     }
   };
 
-  const handleDownloadExport = () => {
-    const payloadText =
-      exportText || JSON.stringify(buildExportPayload(), null, 2);
+  const handleDownloadExport = async () => {
+    if (!ensureOwnerAccess()) return;
+    const payload = await buildExportPayload();
+
+    const payloadText = JSON.stringify(
+      payload,
+      null,
+      2
+    );
 
     setExportText(payloadText);
+
+    setLastExportKeyCount(
+      Object.keys(payload.storage).length
+    );
 
     const blob = new Blob([payloadText], {
       type: "application/json",
@@ -162,14 +209,36 @@ export function DevDataTransfer() {
     });
   };
 
-  const applyImportPayload = (payload: XTrailDataExport) => {
-    const entries = Object.entries(payload.storage).filter(([key, value]) => {
-      return key.startsWith(XTRAIL_STORAGE_PREFIX) && typeof value === "string";
+  const applyImportPayload = async (
+    payload: XTrailDataExport
+  ) => {
+    const entries = Object.entries(
+      payload.storage
+    ).filter(([key, value]) => {
+      return (
+        key.startsWith(XTRAIL_STORAGE_PREFIX) &&
+        typeof value === "string"
+      );
     });
 
-    entries.forEach(([key, value]) => {
-      localStorage.setItem(key, value);
+    const existingXTrailKeys = Object.keys(
+      getXTrailStorageSnapshot()
+    );
+
+    existingXTrailKeys.forEach((key) => {
+      localStorage.removeItem(key);
     });
+
+    await clearDurableVehicles();
+
+    for (const [key, value] of entries) {
+      if (key === VEHICLES_KEY) {
+        await replaceVehiclesFromExport(value);
+        continue;
+      }
+
+      localStorage.setItem(key, value);
+    }
 
     showNotification({
       title: "Data imported",
@@ -184,12 +253,13 @@ export function DevDataTransfer() {
     }, 700);
   };
 
-  const handleImportFromText = () => {
+  const handleImportFromText = async () => {
+    if (!ensureOwnerAccess()) return;
     try {
       const parsed = JSON.parse(importText);
       const payload = validateImportPayload(parsed);
 
-      applyImportPayload(payload);
+      await applyImportPayload(payload);
     } catch (error) {
       console.error("Import failed:", error);
 
@@ -207,6 +277,10 @@ export function DevDataTransfer() {
   const handleImportFile = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
+    if (!ensureOwnerAccess()) {
+      event.target.value = "";
+      return;
+    }
     const file = event.target.files?.[0];
 
     if (!file) return;
@@ -216,7 +290,7 @@ export function DevDataTransfer() {
       const parsed = JSON.parse(text);
       const payload = validateImportPayload(parsed);
 
-      applyImportPayload(payload);
+      await applyImportPayload(payload);
     } catch (error) {
       console.error("File import failed:", error);
 
@@ -233,7 +307,8 @@ export function DevDataTransfer() {
     }
   };
 
-  const handleClearLocalData = () => {
+  const handleClearLocalData = async () => {
+    if (!ensureOwnerAccess()) return;
     if (!clearArmed) {
       setClearArmed(true);
 
@@ -256,6 +331,8 @@ export function DevDataTransfer() {
     keysToRemove.forEach((key) => {
       localStorage.removeItem(key);
     });
+    
+    await clearDurableVehicles();
 
     showNotification({
       title: "Local data cleared",

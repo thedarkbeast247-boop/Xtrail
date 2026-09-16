@@ -42,10 +42,7 @@ import {
   isGlobalAdmin,
 } from "../lib/accessControl";
 import { useNotification } from "../context/NotificationContext";
-
-const devToolsEnabled =
-  import.meta.env.DEV ||
-  import.meta.env.VITE_ENABLE_DEV_TOOLS === "true";
+import { devToolsEnabled } from "../lib/devTools";
 
 export function Profile() {
   const { currentUserAccess, signOut } = useUserAccess();
@@ -121,16 +118,30 @@ export function Profile() {
       new Date(a.finishedAt).getTime()
   );
 
+  const savedTrailFallbackIds = [...savedTrails]
+  .sort(
+    (a, b) =>
+      new Date(b.savedAt).getTime() -
+      new Date(a.savedAt).getTime()
+  )
+  .map((trail) => trail.id);
+
   const savedTrailItemAccess = getFreePlanItemAccess({
     user: currentUserAccess,
     availableIds: savedTrails.map((trail) => trail.id),
     selectionKey: "savedTrailIds",
     limit: FREE_PLAN_SAVED_TRAILS_LIMIT,
-    fallbackIds: savedTrails.map((trail) => trail.id),
+    fallbackIds: savedTrailFallbackIds,
   });
 
   const unlockedSavedTrails = savedTrails.filter((trail) =>
     savedTrailItemAccess.isItemUnlocked(trail.id)
+  );
+
+  const recentUnlockedSavedTrails = [...unlockedSavedTrails].sort(
+    (a, b) =>
+      new Date(b.savedAt).getTime() -
+      new Date(a.savedAt).getTime()
   );
 
   const completedTrailFallbackIds = Array.from(
@@ -253,6 +264,28 @@ export function Profile() {
   const uniqueCompletedTrailsCount =
   completedTrailItemAccess.unlockedIds.length;
 
+  const activeVehicleRideHours = activeVehicle
+    ? savedRides
+        .filter((ride) => ride.vehicleId === activeVehicle.id)
+        .reduce(
+          (sum, ride) => sum + ride.durationSeconds / 3600,
+          0
+        )
+    : 0;
+
+  const activeVehicleCurrentHours = activeVehicle
+    ? (activeVehicle.hoursAtPurchase ?? activeVehicle.hours ?? 0) +
+      (activeVehicle.manualAddedHours ?? 0) +
+      activeVehicleRideHours
+    : 0;
+
+  const activeVehicleWithCurrentUsage = activeVehicle
+    ? {
+        ...activeVehicle,
+        hours: activeVehicleCurrentHours,
+      }
+    : null;
+
   const maintenanceProfile = activeVehicle
   ? getMaintenanceProfile(activeVehicle.type)
   : null;
@@ -261,9 +294,12 @@ export function Profile() {
   ? getServicesForVehicle(activeVehicle.id)
   : [];
 
-  const maintenanceStatuses = activeVehicle
-  ? calculateMaintenanceStatuses(activeVehicle, vehicleServices)
-  : [];
+  const maintenanceStatuses = activeVehicleWithCurrentUsage
+    ? calculateMaintenanceStatuses(
+        activeVehicleWithCurrentUsage,
+        vehicleServices
+      )
+    : [];
 
   const trackingModeLabel = activeVehicle
     ? getTrackingModeLabel(activeVehicle.type)
@@ -273,8 +309,8 @@ export function Profile() {
     ? getVehicleUsageUnit(activeVehicle.type)
     : "hours";
 
-  const usageValue = activeVehicle
-    ? getVehicleUsageValue(activeVehicle)
+  const usageValue = activeVehicleWithCurrentUsage
+    ? getVehicleUsageValue(activeVehicleWithCurrentUsage)
     : 0;
   
   const formatDate = (dateString: string) => {
@@ -309,6 +345,10 @@ export function Profile() {
 
   const currentPlanLabel = getPublicPlanLabel(currentUserAccess);
   const hasProAccess = currentPlanLabel === "Pro Plan";
+
+  const showPlanReview =
+    currentUserAccess.proAccessReviewStatus === "needs_review" ||
+    currentUserAccess.proAccessReviewStatus === "reviewed";
 
   return (
     <div className="min-h-full bg-neutral-950">
@@ -385,6 +425,19 @@ export function Profile() {
               </div>
             </Link>
 
+            <Link to="/ride-history">
+              <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-3 min-h-[108px] flex flex-col items-center justify-center
+                transition-all duration-200 hover:border-neutral-700 hover:bg-neutral-800/60 active:scale-95">
+                <div className="w-10 h-10 bg-sky-500/20 rounded-lg flex items-center justify-center mx-auto mb-2">
+                  <Clock className="w-5 h-5 text-sky-500" />
+                </div>
+
+                <div className="text-white text-xs text-center">
+                  Ride History
+                </div>
+              </div>
+            </Link>
+
             <Link to="/completed-trails">
               <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-3 min-h-[108px] flex flex-col items-center justify-center
                 transition-all duration-200 hover:border-neutral-700 hover:bg-neutral-800/60 active:scale-95">
@@ -425,15 +478,21 @@ export function Profile() {
               </div>
             </Link>
 
-            <Link to="/account/plan-review">
-              <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-3 min-h-[108px] flex flex-col items-center justify-center
-                transition-all duration-200 hover:border-neutral-700 hover:bg-neutral-800/60 active:scale-95">
-                <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center mx-auto mb-2">
-                  <Crown className="w-5 h-5 text-orange-400" />
+            {showPlanReview && (
+              <Link to="/account/plan-review">
+                <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-3 min-h-[108px] flex flex-col items-center justify-center
+                  transition-all duration-200 hover:border-neutral-700 hover:bg-neutral-800/60 active:scale-95">
+                  <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center mx-auto mb-2">
+                    <Crown className="w-5 h-5 text-orange-400" />
+                  </div>
+
+                  <div className="text-white text-xs text-center">
+                    Plan Review
+                  </div>
                 </div>
-                <div className="text-white text-xs text-center">Plan Review</div>
-              </div>
-            </Link>
+              </Link>
+            )}
+            
             {canOpenAdminArea && (
               <Link to="/admin/users">
                 <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-3 min-h-[108px] flex flex-col items-center justify-center
@@ -592,7 +651,7 @@ export function Profile() {
                   </div>
 
                   <div>
-                    <h2 className="text-white mb-3 mt-6">Stats</h2>
+                    <h2 className="text-white mb-3 mt-6">Overall Riding Stats</h2>
                     
                     {unlockedRides.length === 0 ? (
                       <div className="mb-4 bg-neutral-900 border border-neutral-800 rounded-lg p-4 text-sm text-neutral-400">
@@ -933,7 +992,7 @@ export function Profile() {
             </div>
           ) : (
             <div className="space-y-3">
-              {unlockedSavedTrails.slice(0, 3).map((savedTrail) => (
+              {recentUnlockedSavedTrails.slice(0, 3).map((savedTrail) => (
                 <Link
                   key={savedTrail.id}
                   to={`/trail/${savedTrail.trailId}`}

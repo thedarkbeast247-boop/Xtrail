@@ -10,8 +10,9 @@ import type { Vehicle, VehicleSetupProfile } from "../types/vehicle";
 import {
   loadActiveVehicleId,
   loadVehicles,
+  loadVehiclesDurable,
   saveActiveVehicleId,
-  saveVehicles,
+  saveVehiclesDurable,
 } from "../lib/storage";
 
 interface CreateVehicleInput {
@@ -85,28 +86,99 @@ function createVehicle(input: CreateVehicleInput): Vehicle {
 }
 
 export function VehicleProvider({ children }: { children: ReactNode }) {
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [activeVehicleId, setActiveVehicleIdState] = useState<string | null>(null);
+  const [vehicles, setVehicles] = useState<Vehicle[]>(() => {
+    return loadVehicles();
+  });
+
+  const [vehiclesHydrated, setVehiclesHydrated] = useState(false);
+
+  const [activeVehicleId, setActiveVehicleIdState] = useState<string | null>(
+    () => {
+      const storedVehicles = loadVehicles();
+      const storedActiveVehicleId = loadActiveVehicleId();
+
+      if (
+        storedActiveVehicleId &&
+        storedVehicles.some(
+          (vehicle) => vehicle.id === storedActiveVehicleId
+        )
+      ) {
+        return storedActiveVehicleId;
+      }
+
+      return storedVehicles[0]?.id ?? null;
+    }
+  );
 
   useEffect(() => {
-    const storedVehicles = loadVehicles();
-    const storedActiveVehicleId = loadActiveVehicleId();
+    let cancelled = false;
 
-    setVehicles(storedVehicles);
+    const hydrateVehicles = async () => {
+      try {
+        const durableVehicles =
+          await loadVehiclesDurable();
 
-    if (
-      storedActiveVehicleId &&
-      storedVehicles.some((vehicle) => vehicle.id === storedActiveVehicleId)
-    ) {
-      setActiveVehicleIdState(storedActiveVehicleId);
-    } else if (storedVehicles.length > 0) {
-      setActiveVehicleIdState(storedVehicles[0].id);
-    }
+        if (cancelled) {
+          return;
+        }
+
+        setVehicles(durableVehicles);
+
+        const storedActiveVehicleId =
+          loadActiveVehicleId();
+
+        if (
+          storedActiveVehicleId &&
+          durableVehicles.some(
+            (vehicle) =>
+              vehicle.id === storedActiveVehicleId
+          )
+        ) {
+          setActiveVehicleIdState(
+            storedActiveVehicleId
+          );
+        } else {
+          setActiveVehicleIdState(
+            durableVehicles[0]?.id ?? null
+          );
+        }
+      } catch (error) {
+        console.error(
+          "Failed to hydrate durable vehicles:",
+          error
+        );
+      } finally {
+        if (!cancelled) {
+          setVehiclesHydrated(true);
+        }
+      }
+    };
+
+    void hydrateVehicles();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
-    saveVehicles(vehicles);
-  }, [vehicles]);
+    if (!vehiclesHydrated) {
+      return;
+    }
+
+    const persistVehicles = async () => {
+      try {
+        await saveVehiclesDurable(vehicles);
+      } catch (error) {
+        console.error(
+          "CRITICAL: Vehicle data could not be persisted:",
+          error
+        );
+      }
+    };
+
+    void persistVehicles();
+  }, [vehicles, vehiclesHydrated]);
 
   useEffect(() => {
     saveActiveVehicleId(activeVehicleId);
@@ -147,6 +219,18 @@ export function VehicleProvider({ children }: { children: ReactNode }) {
   };
 
   const setActiveVehicleId = (id: string) => {
+    const vehicleExists = vehicles.some(
+      (vehicle) => vehicle.id === id
+    );
+
+    if (!vehicleExists) {
+      console.warn(
+        `Cannot set active vehicle. Vehicle "${id}" does not exist.`
+      );
+
+      return;
+    }
+
     setActiveVehicleIdState(id);
   };
 

@@ -18,11 +18,8 @@ import {
   getAccessLabel,
   hasFullAppAccess,
 } from "../lib/accessControl";
+import { devToolsEnabled } from "../lib/devTools";
 import type { AppRole } from "../types/access";
-
-const devToolsEnabled =
-  import.meta.env.DEV ||
-  import.meta.env.VITE_ENABLE_DEV_TOOLS === "true";
 
 function getRoleIcon(role: AppRole) {
   if (role === "global_admin") return <Crown className="h-5 w-5 text-red-400" />;

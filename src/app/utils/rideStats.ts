@@ -44,16 +44,15 @@ export function getRideStats(rides: SavedRide[]): RideStats {
     0
   );
 
-  const totalSpeed = rides.reduce(
-    (sum, ride) => sum + ride.avgSpeedKmh,
-    0
-  );
-
   const averageRideDistanceKm =
     totalRides > 0 ? totalDistanceKm / totalRides : 0;
 
+  const totalDurationHours = totalDurationSeconds / 3600;
+
   const averageRideSpeedKmh =
-    totalRides > 0 ? totalSpeed / totalRides : 0;
+    totalDurationHours > 0
+      ? totalDistanceKm / totalDurationHours
+      : 0;
 
   return {
     totalRides,

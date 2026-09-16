@@ -168,15 +168,46 @@ export function CompletedTrails() {
     [filteredCompletedTrails]
   );
 
-  const completedTrailFallbackIds = allGroupedCompletedTrails.map(
+    const completedTrailFallbackIds = allGroupedCompletedTrails.map(
     (completedTrail) => completedTrail.trailId
   );
 
+  const availableCompletedTrailIdSet = new Set(
+    completedTrailFallbackIds
+  );
+
+  const completedTrailIdByRecordId = new Map(
+    completedTrails.map((completedTrail) => [
+      completedTrail.id,
+      completedTrail.trailId,
+    ])
+  );
+
+  const normalizedCompletedTrailSelectionIds = Array.from(
+    new Set(
+      currentUserAccess.freePlanSelections.completedTrailIds
+        .map((storedId) => {
+          if (availableCompletedTrailIdSet.has(storedId)) {
+            return storedId;
+          }
+
+          return completedTrailIdByRecordId.get(storedId);
+        })
+        .filter((trailId): trailId is string => Boolean(trailId))
+    )
+  );
+
+  const completedTrailAccessUser = {
+    ...currentUserAccess,
+    freePlanSelections: {
+      ...currentUserAccess.freePlanSelections,
+      completedTrailIds: normalizedCompletedTrailSelectionIds,
+    },
+  };
+
   const completedTrailItemAccess = getFreePlanItemAccess({
-    user: currentUserAccess,
-    availableIds: allGroupedCompletedTrails.map(
-      (completedTrail) => completedTrail.trailId
-    ),
+    user: completedTrailAccessUser,
+    availableIds: completedTrailFallbackIds,
     selectionKey: "completedTrailIds",
     limit: FREE_PLAN_COMPLETED_TRAILS_LIMIT,
     fallbackIds: completedTrailFallbackIds,
@@ -189,6 +220,40 @@ export function CompletedTrails() {
       )
   ).length;
 
+  if (vehicleIdFromUrl && !selectedVehicle) {
+    return (
+      <div className="min-h-full bg-neutral-950 px-4 py-6 text-white">
+        <Link
+          to="/garage"
+          className="inline-flex items-center gap-2 text-sm text-neutral-400 transition hover:text-white"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Garage
+        </Link>
+
+        <div className="mt-6 rounded-2xl border border-neutral-800 bg-neutral-900 p-6 text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-neutral-800">
+            <Mountain className="h-6 w-6 text-neutral-400" />
+          </div>
+
+          <h1 className="mt-4 text-xl font-semibold text-white">
+            Vehicle not found
+          </h1>
+
+          <p className="mt-2 text-sm leading-6 text-neutral-400">
+            This vehicle does not exist in your Garage or may have been removed.
+          </p>
+
+          <Link to="/garage" className="mt-5 block">
+            <Button className="w-full bg-orange-500 text-black hover:bg-orange-400">
+              Return to Garage
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   const lockedCompletedTrailCount =
     groupedCompletedTrails.length -
     groupedCompletedTrails.filter((completedTrail) =>
@@ -197,7 +262,7 @@ export function CompletedTrails() {
       )
     ).length;
 
-    if (isVehicleFilterLocked && selectedVehicle) {
+  if (isVehicleFilterLocked && selectedVehicle) {
     return (
       <div className="min-h-full bg-neutral-950">
         <div className="border-b border-neutral-800 bg-gradient-to-b from-neutral-900 to-neutral-950 px-4 py-4">
@@ -370,9 +435,9 @@ export function CompletedTrails() {
                       </p>
 
                       <p className="mt-1 text-xs leading-5 text-neutral-400">
-                        Your extra completed trails and repeat completions remain
-                        safely stored. Subscribe to the Pro Plan to unlock your
-                        full completed-trail history.
+                        Your extra completed trails remain safely stored. Repeat
+                        completions do not use additional Free Plan slots. Subscribe
+                        to the Pro Plan to unlock your full completed-trail history.
                       </p>
                     </>
                   ) : (
@@ -382,9 +447,8 @@ export function CompletedTrails() {
                       </p>
 
                       <p className="mt-1 text-xs leading-5 text-neutral-400">
-                        Free Plan users can keep up to{" "}
-                        {FREE_PLAN_COMPLETED_TRAILS_LIMIT} unique completed trails
-                        unlocked.
+                        Free Plan users can access up to{" "}
+                        {FREE_PLAN_COMPLETED_TRAILS_LIMIT} unique completed trails.
                       </p>
                     </>
                   )}
@@ -411,6 +475,16 @@ export function CompletedTrails() {
                       {!isLocked && (
                         <Link
                           to={`/trail/${completedTrail.trailId}`}
+                          state={{
+                            from: vehicleIdFromUrl
+                              ? `/completed-trails?vehicleId=${encodeURIComponent(
+                                  vehicleIdFromUrl
+                                )}`
+                              : "/completed-trails",
+                            backLabel: vehicleIdFromUrl
+                              ? "Back to Vehicle Completed Trails"
+                              : "Back to Completed Trails",
+                          }}
                           aria-label={`Open ${completedTrail.trailName}`}
                           className="absolute inset-0 z-20"
                         />

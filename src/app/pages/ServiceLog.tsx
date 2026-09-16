@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import type { Service } from "../types/service";
+import type { SavedRide } from "../utils/rideStats";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -103,6 +104,8 @@ export function ServiceLog() {
 
   const [isServiceHistoryOpen, setIsServiceHistoryOpen] = useState(true);
 
+  const [savedRides, setSavedRides] = useState<SavedRide[]>([]);
+
   const [newService, setNewService] = useState({
     type: "",
     date: "",
@@ -121,6 +124,23 @@ export function ServiceLog() {
     partsUsed: "",
     notes: "",
   });
+
+  useEffect(() => {
+    const storedSavedRides = localStorage.getItem("xtrail-saved-rides");
+
+    if (!storedSavedRides) {
+      setSavedRides([]);
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(storedSavedRides) as SavedRide[];
+      setSavedRides(parsed);
+    } catch (error) {
+      console.error("Failed to load saved rides:", error);
+      setSavedRides([]);
+    }
+  }, []);
 
   useEffect(() => {
     if (!hasAppliedUrlVehicleFilter && vehicleIdFromUrl) {
@@ -158,8 +178,52 @@ export function ServiceLog() {
     ? getServicesForVehicle(selectedVehicle.id)
     : [];
 
-  const maintenanceStatuses = selectedVehicle
-    ? calculateMaintenanceStatuses(selectedVehicle, filteredServices)
+  const selectedVehicleRides = useMemo(() => {
+    if (!selectedVehicleId) {
+      return [];
+    }
+
+    return savedRides.filter(
+      (ride) => ride.vehicleId === selectedVehicleId
+    );
+  }, [savedRides, selectedVehicleId]);
+
+  const totalRideDurationSeconds = useMemo(() => {
+    return selectedVehicleRides.reduce(
+      (sum, ride) => sum + ride.durationSeconds,
+      0
+    );
+  }, [selectedVehicleRides]);
+
+  const totalRideHours = totalRideDurationSeconds / 3600;
+
+  const hoursAtPurchase =
+    selectedVehicle?.hoursAtPurchase ??
+    selectedVehicle?.hours ??
+    0;
+
+  const manualAddedHours =
+    selectedVehicle?.manualAddedHours ?? 0;
+
+  const currentEngineHours =
+    hoursAtPurchase +
+    totalRideHours +
+    manualAddedHours;
+
+  const selectedVehicleWithCurrentUsage = selectedVehicle
+    ? {
+        ...selectedVehicle,
+        hours: currentEngineHours,
+        hoursAtPurchase,
+        manualAddedHours,
+      }
+    : null;
+
+  const maintenanceStatuses = selectedVehicleWithCurrentUsage
+    ? calculateMaintenanceStatuses(
+        selectedVehicleWithCurrentUsage,
+        filteredServices
+      )
     : [];
 
   const maintenanceReminderSummary =
@@ -773,7 +837,7 @@ export function ServiceLog() {
             <div className="text-xl font-bold text-white">
               {selectedVehicle
                 ? usageUnit === "hours"
-                  ? selectedVehicle.hours.toFixed(0)
+                  ? currentEngineHours.toFixed(1)
                   : selectedVehicle.mileage.toFixed(0)
                 : "0"}
             </div>

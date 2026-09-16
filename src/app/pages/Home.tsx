@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { ZoomIn, ZoomOut, Filter, MapPin, Star, Lock, Mountain, Bike, Navigation, Maximize2, X, Compass, Home as HomeIcon, Layers, Locate, TrendingUp, Flame, ChevronDown } from 'lucide-react';
+import { ZoomIn, ZoomOut, Filter, MapPin, Star, Lock, Mountain, Bike, Navigation, X, Compass, Home as HomeIcon, Layers, Locate, TrendingUp, Flame, ChevronDown } from 'lucide-react';
 import { mockTrails, vehicleClasses, trailTypes } from "../data/mockData";
 import type { VehicleClass, TrailType, Trail } from "../types/trail";
 import { Badge } from '../components/ui/badge';
@@ -12,9 +12,9 @@ import { useUserAccess } from "../context/UserAccessContext";
 import {
   FREE_PLAN_TRAIL_VIEW_LIMIT,
   getTrailDiscoveryAccess,
+  getTrailDiscoveryItemAccess,
 } from "../lib/accessControl";
-import { useVehicles } from "../context/VehicleContext";
-import { type SavedRide } from "../utils/rideStats";
+
 import { type CompletedTrail } from "../types/completedTrail";
 import { type SavedTrail } from "../types/savedTrail";
 
@@ -30,9 +30,66 @@ const discoveryAreas = [
 
 type DiscoveryArea = (typeof discoveryAreas)[number];
 
+function getDistanceBetweenPointsKm(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number
+) {
+  const earthRadiusKm = 6371;
+  const toRadians = (degrees: number) =>
+    (degrees * Math.PI) / 180;
+
+  const latitudeDifference = toRadians(lat2 - lat1);
+  const longitudeDifference = toRadians(lng2 - lng1);
+
+  const a =
+    Math.sin(latitudeDifference / 2) ** 2 +
+    Math.cos(toRadians(lat1)) *
+      Math.cos(toRadians(lat2)) *
+      Math.sin(longitudeDifference / 2) ** 2;
+
+  const c =
+    2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return earthRadiusKm * c;
+}
+
+function getTrailsForDiscoveryArea(
+  area: DiscoveryArea,
+  userLocation: { lat: number; lng: number }
+) {
+  if (area === "Near me") {
+    return [...mockTrails].sort((a, b) => {
+      const distanceToA = getDistanceBetweenPointsKm(
+        userLocation.lat,
+        userLocation.lng,
+        a.lat,
+        a.lng
+      );
+
+      const distanceToB = getDistanceBetweenPointsKm(
+        userLocation.lat,
+        userLocation.lng,
+        b.lat,
+        b.lng
+      );
+
+      return distanceToA - distanceToB;
+    });
+  }
+
+  return mockTrails.filter(
+    (trail) => trail.province === area
+  );
+}
+
+function feetToMeters(feet: number) {
+  return Math.round(feet * 0.3048);
+}
+
 export function Home() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { activeVehicle } = useVehicles();
   const { currentUserAccess } = useUserAccess();
   const [selectedVehicleClass, setSelectedVehicleClass] = useState<VehicleClass | 'All'>('All');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('All');
@@ -50,18 +107,7 @@ export function Home() {
   const [discoverFeed, setDiscoverFeed] = useState<DiscoverFeed>('nearby');
   const [selectedArea, setSelectedArea] = useState<DiscoveryArea>("Near me");
   const [showTrailLoadedBanner, setShowTrailLoadedBanner] = useState(false);
-  const [isRideActive, setIsRideActive] = useState(false);
-  const [rideElapsedSeconds, setRideElapsedSeconds] = useState(0);
-  const [isRidePaused, setIsRidePaused] = useState(false);
-  const [activeRideTrail, setActiveRideTrail] = useState<Trail | null>(null);
-  const [rideDistanceKm, setRideDistanceKm] = useState(0);
-  const [rideAverageSpeedKmh, setRideAverageSpeedKmh] = useState(0);
-  const [showRideSummary, setShowRideSummary] = useState(false);
-  const [lastRideSummary, setLastRideSummary] = useState<Omit<SavedRide, "id"> | null>(null);
-  const [completedTrails, setCompletedTrails] = useState<CompletedTrail[]>([]);
-  const [savedRides, setSavedRides] = useState<SavedRide[]>([]);
-  const [savedTrails, setSavedTrails] = useState<SavedTrail[]>([]);
-
+  
   type TrailFilter = "all" | "saved" | "completed";
 
   const [activeFilter, setActiveFilter] = useState<TrailFilter>("all");
@@ -75,55 +121,6 @@ export function Home() {
   type DiscoverySection = "mode" | "area" | null;
 
   const [openDiscoverySection, setOpenDiscoverySection] = useState<DiscoverySection>(null);
-
-  const handleSaveRideSummary = () => {
-    if (!lastRideSummary) return;
-
-    const newRide: SavedRide = {
-      id: crypto.randomUUID(),
-      ...lastRideSummary,
-    };
-
-    setSavedRides((prev) => [newRide, ...prev]);
-
-    if (newRide.trailId) {
-      try {
-        const storedCompletedTrails = localStorage.getItem("xtrail-completed-trails");
-
-        const parsedCompletedTrails: CompletedTrail[] = storedCompletedTrails
-          ? JSON.parse(storedCompletedTrails)
-          : [];
-
-        const newCompletedTrail: CompletedTrail = {
-          id: crypto.randomUUID(),
-          trailId: newRide.trailId,
-          trailName: newRide.trailName,
-          completedAt: newRide.finishedAt,
-          rideId: newRide.id,
-        };
-
-        localStorage.setItem(
-          "xtrail-completed-trails",
-          JSON.stringify([newCompletedTrail, ...parsedCompletedTrails])
-        );
-      } catch (error) {
-        console.error("Failed to save completed trail", error);
-      }
-    }
-
-    setShowRideSummary(false);
-    setLastRideSummary(null);
-  };
-
-  const handleDiscardRideSummary = () => {
-    setShowRideSummary(false);
-    setLastRideSummary(null);
-  };
-  
-  const formatRideFinishedAt = (isoDate: string) => {
-    const date = new Date(isoDate);
-    return date.toLocaleString();
-  };
 
   const toggleDiscoverySection = (
     section: Exclude<DiscoverySection, null>
@@ -161,56 +158,80 @@ export function Home() {
 
   const handleDiscoveryAreaChange = (area: DiscoveryArea) => {
     setSelectedArea(area);
+    setSelectedTrail(null);
+    setShowTrailLoadedBanner(false);
     setOpenDiscoverySection(null);
   };
 
-  // Effect 1 for handling "startTrail" query param
+    // Effect 1 for handling "startTrail" query param
   useEffect(() => {
-  const startTrailId = searchParams.get("startTrail");
+    const startTrailId = searchParams.get("startTrail");
 
-  // If no trail was passed → do nothing
-  if (!startTrailId) return;
+    if (!startTrailId) return;
 
-  // Find the trail in your mock data
-  const matchedTrail = mockTrails.find(
-    (trail) => trail.id === startTrailId
-  );
+    const matchedTrail = mockTrails.find(
+      (trail) => trail.id === startTrailId
+    );
 
-  if (!matchedTrail) return;
+    if (!matchedTrail) {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("startTrail");
+        return next;
+      });
 
-  // ✅ Select the trail (this opens the panel)
-  setSelectedTrail(matchedTrail);
+      return;
+    }
 
-  // ✅ Selected trail (this shows the "Trail loaded" banner)
-  setShowTrailLoadedBanner(true);
+    const targetArea: DiscoveryArea =
+      discoveryAreas.includes(
+        matchedTrail.province as DiscoveryArea
+      )
+        ? (matchedTrail.province as DiscoveryArea)
+        : "Near me";
 
-  // ✅ Switch to nearby mode
-  setDiscoverFeed("nearby");
+    const targetAreaTrails = getTrailsForDiscoveryArea(
+      targetArea,
+      userLocation
+    );
 
-  // ✅ Set the correct area based on the trail
-  setSelectedArea(
-    discoveryAreas.includes(matchedTrail.province as DiscoveryArea)
-      ? (matchedTrail.province as DiscoveryArea)
-      : "Near me"
-  );
+    const targetAreaAccess = getTrailDiscoveryItemAccess(
+      currentUserAccess,
+      targetAreaTrails.map((trail) => trail.id)
+    );
 
-  // ✅ Reset map position
-  setMapPosition({ x: 0, y: 0 });
+    setDiscoverFeed("nearby");
+    setSelectedArea(targetArea);
+    setMapPosition({ x: 0, y: 0 });
 
-  // ✅ Slight zoom in
-  setZoomLevel(1.8);
+    if (targetAreaAccess.isItemUnlocked(matchedTrail.id)) {
+      setSelectedTrail(matchedTrail);
+      setShowTrailLoadedBanner(true);
+      setZoomLevel(1.8);
+    } else {
+      setSelectedTrail(null);
+      setShowTrailLoadedBanner(false);
+      setZoomLevel(1);
+    }
 
-  // ✅ Scroll to top
-  window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
 
-  // ✅ Remove the query param after using it
-  setSearchParams((prev) => {
-    const next = new URLSearchParams(prev);
-    next.delete("startTrail");
-    return next;
-  });
-}, [searchParams, setSearchParams]);
-// Effect 1 for handling "startTrail" query param (End of effect 1)
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("startTrail");
+      return next;
+    });
+  }, [
+    searchParams,
+    setSearchParams,
+    currentUserAccess,
+    userLocation.lat,
+    userLocation.lng,
+  ]);
+  // Effect 1 for handling "startTrail" query param (End of effect 1)
 
   // Effect 2 for hiding the banner after 2.5 seconds
   useEffect(() => {
@@ -223,94 +244,28 @@ export function Home() {
     return () => window.clearTimeout(timeout);
   }, [showTrailLoadedBanner]);
   // Effect 2 for hiding the banner after 2.5 seconds (End of effect 2)
-
-  // Effect 3 for simulating ride timer(start of the timer effect)
-  useEffect(() => {
-    if (!isRideActive || isRidePaused) return;
-
-    const interval = window.setInterval(() => {
-      setRideElapsedSeconds((prevSeconds) => {
-        const nextSeconds = prevSeconds + 1;
-
-        setRideDistanceKm((prevDistance) => {
-          const nextDistance = Number((prevDistance + 0.005).toFixed(2));
-          const elapsedHours = nextSeconds / 3600;
-          const nextAverageSpeed =
-            elapsedHours > 0 ? Number((nextDistance / elapsedHours).toFixed(1)) : 0;
-
-          setRideAverageSpeedKmh(nextAverageSpeed);
-          return nextDistance;
-        });
-
-        return nextSeconds;
-      });
-    }, 1000);
-
-    return () => window.clearInterval(interval);
-  }, [isRideActive, isRidePaused]);
-  // Effect 3 for simulating ride timer(end of the timer effect)
   
-  // Effect 4 for loading/saving rides to localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("xtrail-saved-rides");
-    if (!saved) return;
-
-    try {
-      const parsed = JSON.parse(saved) as SavedRide[];
-      setSavedRides(parsed);
-    } catch (error) {
-      console.error("Failed to load saved rides", error);
-    }
-  }, []);
-
-  // Effect 5 for loading completed trails from localStorage(start of effect 5)
-  useEffect(() => {
-    const storedCompletedTrails = localStorage.getItem("xtrail-completed-trails");
-
-    if (!storedCompletedTrails) {
-      setCompletedTrails([]);
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(storedCompletedTrails) as CompletedTrail[];
-      setCompletedTrails(parsed);
-    } catch (error) {
-      console.error("Failed to load completed trails", error);
-      setCompletedTrails([]);
-    }
-  }, []);
-  // Effect 5 for loading completed trails from localStorage(end of effect 5)
-
-  // Effect 6 for loading/saving saved trails to localStorage (start of effect 6)
-  useEffect(() => {
-    const storedSavedTrails = localStorage.getItem("xtrail-saved-trails");
-
-    if (!storedSavedTrails) {
-      setSavedTrails([]);
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(storedSavedTrails) as SavedTrail[];
-      setSavedTrails(parsed);
-    } catch (error) {
-      console.error("Failed to load saved trails", error);
-      setSavedTrails([]);
-    }
-  }, []);
-
   useEffect(() => {
     const loadTrailStates = () => {
       try {
         const savedRaw = localStorage.getItem("xtrail-saved-trails");
         const completedRaw = localStorage.getItem("xtrail-completed-trails");
 
-        const saved = savedRaw ? JSON.parse(savedRaw) : [];
-        const completed = completedRaw ? JSON.parse(completedRaw) : [];
+        const saved = savedRaw
+          ? (JSON.parse(savedRaw) as SavedTrail[])
+          : [];
 
-        const savedIds = saved.map((item: any) => item.trailId);
-        const completedIds = completed.map((item: any) => item.trailId);
+        const completed = completedRaw
+          ? (JSON.parse(completedRaw) as CompletedTrail[])
+          : [];
+
+        const savedIds = Array.from(
+          new Set(saved.map((item) => item.trailId))
+        );
+
+        const completedIds = Array.from(
+          new Set(completed.map((item) => item.trailId))
+        );
 
         setSavedTrailIds(savedIds);
         setCompletedTrailIds(completedIds);
@@ -330,73 +285,31 @@ export function Home() {
     };
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem("xtrail-saved-rides", JSON.stringify(savedRides));
-  }, [savedRides]);
-  // Effect 4 for loading/saving rides to localStorage (End of effect 4)
+  const areaTrails = getTrailsForDiscoveryArea(
+    selectedArea,
+    userLocation
+  );
 
-  //Timer formatting function
-  const formatRideTime = (totalSeconds: number) => {
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
+  const trailDiscoveryItemAccess =
+    getTrailDiscoveryItemAccess(
+      currentUserAccess,
+      areaTrails.map((trail) => trail.id)
+    );
 
-    const hh = String(hours).padStart(2, "0");
-    const mm = String(minutes).padStart(2, "0");
-    const ss = String(seconds).padStart(2, "0");
+  const unlockedAreaTrailIdSet = new Set(
+    trailDiscoveryItemAccess.unlockedIds
+  );
 
-    return `${hh}:${mm}:${ss}`;
-  };
-  //Timer formatting function
+  const unlockedAreaTrails = areaTrails.filter((trail) =>
+    unlockedAreaTrailIdSet.has(trail.id)
+  );
 
-  const handleBeginRide = () => {
-    if (!selectedTrail) return;
-
-    setActiveRideTrail(selectedTrail);
-    setRideElapsedSeconds(0);
-    setRideDistanceKm(0);
-    setRideAverageSpeedKmh(0);
-    setIsRidePaused(false);
-    setIsRideActive(true);
-  };
-
-  const handlePauseResumeRide = () => {
-    setIsRidePaused((prev) => !prev);
-  };
-
-  const handleStopRide = () => {
-    if (activeRideTrail) {
-      setLastRideSummary({
-        trailId: activeRideTrail.id,
-        trailName: activeRideTrail.name,
-        trailImageUrl: activeRideTrail.imageUrl,
-        durationSeconds: rideElapsedSeconds,
-        distanceKm: rideDistanceKm,
-        avgSpeedKmh: rideAverageSpeedKmh,
-        finishedAt: new Date().toISOString(),
-        vehicleId: activeVehicle?.id,
-        vehicleName: activeVehicle?.name,
-        vehicleType: activeVehicle?.type,
-        coverImageUrl: activeRideTrail.imageUrl,
-        galleryImages: [],
-        routePathData: activeRideTrail.pathData,
-      });
-
-      setShowRideSummary(true);
-    }
-
-    setIsRideActive(false);
-    setIsRidePaused(false);
-    setActiveRideTrail(null);
-    setRideElapsedSeconds(0);
-    setRideDistanceKm(0);
-    setRideAverageSpeedKmh(0);
-  };
-
-  const filteredTrails = mockTrails.filter((trail) => {
+  const filteredTrails = unlockedAreaTrails.filter((trail) => {
     const matchesVehicle =
       selectedVehicleClass === "All" ||
-      trail.vehicleClass.includes(selectedVehicleClass as VehicleClass);
+      trail.vehicleClass.includes(
+        selectedVehicleClass as VehicleClass
+      );
 
     const matchesDifficulty =
       selectedDifficulty === "All" ||
@@ -407,10 +320,12 @@ export function Home() {
       trail.trailType === selectedTrailType;
 
     const matchesSaved =
-      activeFilter !== "saved" || savedTrailIds.includes(trail.id);
+      activeFilter !== "saved" ||
+      savedTrailIds.includes(trail.id);
 
     const matchesCompleted =
-      activeFilter !== "completed" || completedTrailIds.includes(trail.id);
+      activeFilter !== "completed" ||
+      completedTrailIds.includes(trail.id);
 
     return (
       matchesVehicle &&
@@ -421,31 +336,33 @@ export function Home() {
     );
   });
 
-  const nearbyTrails =
-  selectedArea === "Near me"
-    ? filteredTrails
-    : filteredTrails.filter((trail) => trail.province === selectedArea);
-
   const displayedTrails =
-  discoverFeed === "popular"
-    ? [...filteredTrails].sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
-    : nearbyTrails;
+    discoverFeed === "popular"
+      ? [...filteredTrails].sort(
+          (a, b) =>
+            (b.popularity || 0) -
+            (a.popularity || 0)
+        )
+      : filteredTrails;
+
+  const trailDiscoveryAccess =
+    getTrailDiscoveryAccess(
+      currentUserAccess,
+      areaTrails.length
+    );
+
+  const visibleTrails = displayedTrails;
+
+  const hiddenTrailCount =
+    trailDiscoveryItemAccess.lockedIds.length;
+
+  const unlockedAreaTrailCount =
+    trailDiscoveryItemAccess.unlockedIds.length;
 
   const handleZoomIn = (e: React.MouseEvent) => {
     e.stopPropagation();
     setZoomLevel((prev) => Math.min(prev + 0.5, 5));
   };
-
-  const trailDiscoveryAccess = getTrailDiscoveryAccess(
-    currentUserAccess,
-    displayedTrails.length
-  );
-
-  const visibleTrails = trailDiscoveryAccess.unlimited
-    ? displayedTrails
-    : displayedTrails.slice(0, trailDiscoveryAccess.visibleLimit);
-
-  const hiddenTrailCount = trailDiscoveryAccess.hiddenCount;
 
   const handleZoomOut = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -617,9 +534,6 @@ export function Home() {
     return selectedTrailType === "All" ? "All" : selectedTrailType;
   };
 
-  const savedTrailsCount = savedTrailIds.length;
-  const completedTrailsCount = completedTrailIds.length;
-
   const getFilterCardClass = (section: Exclude<FilterSection, null>) => {
     const isOpen = openFilterSection === section;
 
@@ -642,15 +556,11 @@ export function Home() {
   };
 
   const isTrailSaved = (trailId: string) => {
-    return savedTrails.some(
-      (savedTrail) => savedTrail.trailId === trailId
-    );
+    return savedTrailIds.includes(trailId);
   };
 
   const isTrailCompleted = (trailId: string) => {
-    return completedTrails.some(
-      (completedTrail) => completedTrail.trailId === trailId
-    );
+    return completedTrailIds.includes(trailId);
   };
 
   const getFilterButtonClass = (isActive: boolean, activeColor = "emerald") => {
@@ -908,68 +818,6 @@ export function Home() {
           </div>
         )}
 
-        {isRideActive && activeRideTrail && (
-          <div className="fixed bottom-35 left-1/2 z-[50] w-full max-w-[440px] -translate-x-1/2 px-2">
-            <div className="rounded-2xl border border-neutral-800 bg-neutral-900/78 px-4 py-3 shadow-xl backdrop-blur-md">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className={`h-2.5 w-2.5 rounded-full ${
-                        isRidePaused ? "bg-yellow-400" : "bg-emerald-400"
-                      }`}
-                    />
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
-                      {isRidePaused ? "Ride Paused" : "Ride Active"}
-                    </p>
-                  </div>
-
-                  <h3 className="mt-2 truncate text-sm font-semibold text-white">
-                    {activeRideTrail.name}
-                  </h3>
-
-                  <p className="mt-2 text-2xl font-bold tracking-tight text-white">
-                    {formatRideTime(rideElapsedSeconds)}
-                  </p>
-
-                  <div className="mt-2 flex items-center gap-4 text-xs text-neutral-300">
-                    <div>
-                      <span className="text-neutral-500">Distance</span>{" "}
-                      <span className="font-semibold text-white">{rideDistanceKm.toFixed(2)} km</span>
-                    </div>
-                    <div>
-                      <span className="text-neutral-500">Avg Speed</span>{" "}
-                      <span className="font-semibold text-white">{rideAverageSpeedKmh.toFixed(1)} km/h</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <button
-                    type="button"
-                    onClick={handlePauseResumeRide}
-                    className={`min-w-[92px] rounded-2xl px-4 py-2 text-sm font-semibold transition ${
-                      isRidePaused
-                        ? "bg-emerald-600 text-white hover:bg-emerald-500"
-                        : "bg-yellow-500 text-black hover:bg-yellow-400"
-                    }`}
-                  >
-                    {isRidePaused ? "Resume" : "Pause"}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleStopRide}
-                    className="min-w-[92px] rounded-2xl bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-400"
-                  >
-                    Stop Ride
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Bottom attribution bar */}
         <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm py-2 px-4 flex items-center justify-between pointer-events-auto z-30">
           <div className="flex items-center gap-2">
@@ -983,7 +831,7 @@ export function Home() {
             <span className="text-xs text-neutral-900 font-medium">
               {trailDiscoveryAccess.unlimited
                 ? `${visibleTrails.length} trails`
-                : `${visibleTrails.length}/${FREE_PLAN_TRAIL_VIEW_LIMIT} trails`}
+                : `${unlockedAreaTrailCount}/${areaTrails.length} unlocked`}
             </span>
             <div className="w-px h-4 bg-neutral-300"></div>
             <span className="text-xs text-neutral-600">Zoom {zoomLevel.toFixed(1)}x</span>
@@ -1044,7 +892,9 @@ export function Home() {
 
                   <div className="mb-4">
                     <div className="text-neutral-600 text-xs mb-1">Distance</div>
-                    <div className="text-neutral-900 text-xl font-bold">{selectedTrail.distance}mi</div>
+                    <div className="text-neutral-900 text-xl font-bold">
+                      {selectedTrail.distance} km
+                    </div>
                   </div>
                 </div>
 
@@ -1078,7 +928,9 @@ export function Home() {
                 <div className="grid grid-cols-2 gap-3 mb-4">
                   <div className="bg-neutral-50 rounded-lg p-3">
                     <div className="text-neutral-600 text-xs mb-1">Elevation Gain</div>
-                    <div className="text-neutral-900 font-bold">{selectedTrail.elevation} ft</div>
+                    <div className="text-neutral-900 font-bold">
+                      {feetToMeters(selectedTrail.elevation)} m
+                    </div>
                   </div>
                   <div className="bg-neutral-50 rounded-lg p-3">
                     <div className="text-neutral-600 text-xs mb-1">Est. Time</div>
@@ -1109,16 +961,28 @@ export function Home() {
                   </Badge>
                 </div>
                 
-                {/* Begin ride Button */}
-                <Button
-                  onClick={handleBeginRide}
-                  className="mb-3 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-6 text-base"
+                {/* Begin Ride */}
+                <Link
+                  to={`/record?trailId=${selectedTrail.id}`}
+                  className="mb-3 block"
                 >
-                  Begin Ride
-                </Button>
+                  <Button
+                    type="button"
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-6 text-base"
+                  >
+                    Begin Ride
+                  </Button>
+                </Link>
 
                 {/* Action Button */}
-                <Link to={`/trail/${selectedTrail.id}`} className="block">
+                <Link
+                  to={`/trail/${selectedTrail.id}`}
+                  state={{
+                    from: "/",
+                    backLabel: "Back to Trails",
+                  }}
+                  className="block"
+                >
                   <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-6 text-base">
                     Learn More
                   </Button>
@@ -1244,6 +1108,7 @@ export function Home() {
                     type="button"
                     onClick={() => {
                       setActiveFilter("all");
+                      setSelectedTrail(null);
                       setOpenFilterSection(null);
                     }}
                     className={getFilterButtonClass(activeFilter === "all", "orange")}
@@ -1255,6 +1120,7 @@ export function Home() {
                     type="button"
                     onClick={() => {
                       setActiveFilter("saved");
+                      setSelectedTrail(null);
                       setOpenFilterSection(null);
                     }}
                     className={getFilterButtonClass(activeFilter === "saved", "orange")}
@@ -1266,6 +1132,7 @@ export function Home() {
                     type="button"
                     onClick={() => {
                       setActiveFilter("completed");
+                      setSelectedTrail(null);
                       setOpenFilterSection(null);
                     }}
                     className={getFilterButtonClass(activeFilter === "completed", "orange")}
@@ -1343,9 +1210,9 @@ export function Home() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-white text-lg font-semibold">
-                  {trailDiscoveryAccess.unlimited
-                    ? `${visibleTrails.length} Trails Found`
-                    : `${visibleTrails.length} of ${displayedTrails.length} Trails Available`}
+                  {`${visibleTrails.length} ${
+                    visibleTrails.length === 1 ? "Trail" : "Trails"
+                  } Found`}
                 </p>
                 <p className="text-neutral-400 text-sm">
                   {activeFilter === "saved" && "Saved trails ready to revisit"}
@@ -1353,11 +1220,14 @@ export function Home() {
                   {activeFilter === "all" && "Public trails ready to explore"}
                 </p>
 
-                {!trailDiscoveryAccess.unlimited && displayedTrails.length > 0 && (
-                  <p className="mt-1 text-xs text-orange-400">
-                    Free users can view up to {FREE_PLAN_TRAIL_VIEW_LIMIT} trails in this area.
-                  </p>
-                )}
+                {!trailDiscoveryAccess.unlimited &&
+                  areaTrails.length > 0 && (
+                    <p className="mt-1 text-xs text-orange-400">
+                      {unlockedAreaTrailCount} of {areaTrails.length} trails
+                      unlocked for {selectedArea}. Free Plan users can access up
+                      to {FREE_PLAN_TRAIL_VIEW_LIMIT} trails per selected area.
+                    </p>
+                  )}
               </div>
 
               {(activeFilter !== "all" ||
@@ -1534,73 +1404,6 @@ export function Home() {
           )}
         </div>
       </div>
-
-      {/* Summary Block */}
-      {showRideSummary && lastRideSummary && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 px-5 py-8">
-          <div className="w-full max-w-[340px] rounded-3xl border border-neutral-800 bg-neutral-900 p-5 shadow-2xl">
-            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-400">
-              Ride complete
-            </p>
-
-            <h2 className="mt-2 text-2xl font-bold tracking-tight leading-tight text-white">
-              {lastRideSummary.trailName}
-            </h2>
-
-            <p className="mt-1 text-sm text-neutral-400">
-              Finished {formatRideFinishedAt(lastRideSummary.finishedAt)}
-            </p>
-
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              <div className="rounded-2xl bg-neutral-800/80 p-3">
-                <p className="text-xs text-neutral-400">Duration</p>
-                <p className="mt-2 text-lg font-bold text-white">
-                  {formatRideTime(lastRideSummary.durationSeconds)}
-                </p>
-              </div>
-
-              <div className="rounded-2xl bg-neutral-800/80 p-3">
-                <p className="text-xs text-neutral-400">Distance</p>
-                <p className="mt-2 text-lg font-bold text-white">
-                  {lastRideSummary.distanceKm.toFixed(2)} km
-                </p>
-              </div>
-
-              <div className="rounded-2xl bg-neutral-800/80 p-3">
-                <p className="text-xs text-neutral-400">Avg Speed</p>
-                <p className="mt-2 text-lg font-bold text-white">
-                  {lastRideSummary.avgSpeedKmh.toFixed(1)} km/h
-                </p>
-              </div>
-
-              <div className="rounded-2xl bg-neutral-800/80 p-3">
-                <p className="text-xs text-neutral-400">Trail</p>
-                <p className="mt-2 text-sm font-bold text-white">
-                  {lastRideSummary.trailName}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={handleDiscardRideSummary}
-                className="rounded-2xl border border-neutral-700 bg-neutral-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800"
-              >
-                Discard
-              </button>
-
-              <button
-                type="button"
-                onClick={handleSaveRideSummary}
-                className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500"
-              >
-                Save Ride
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

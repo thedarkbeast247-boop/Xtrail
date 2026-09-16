@@ -43,6 +43,17 @@ import {
   getFreePlanItemAccess,
 } from "../lib/accessControl";
 
+const hourBasedVehicleTypes: VehicleType[] = [
+  "dirt-bike",
+  "adventure-bike",
+  "quad",
+  "sxs",
+];
+
+function vehicleUsesEngineHours(type: "" | VehicleType | undefined) {
+  return Boolean(type) && hourBasedVehicleTypes.includes(type as VehicleType);
+}
+
 const maintenanceStatusOrder = {
   overdue: 0,
   due_soon: 1,
@@ -523,6 +534,9 @@ export function VehicleDetail() {
 
   const vehicle = vehicles.find((v) => v.id === vehicleId);
 
+  const vehicleUsesHours = vehicleUsesEngineHours(vehicle?.type);
+  const editVehicleUsesHours = vehicleUsesEngineHours(editVehicle.type);
+
   const vehicleFallbackIds = [...vehicles]
     .sort((a, b) => {
       if (a.id === activeVehicleId) return -1;
@@ -626,9 +640,15 @@ export function VehicleDetail() {
       brand: editVehicle.brand.trim(),
       model: editVehicle.model.trim(),
       year: Number(editVehicle.year),
-      hours: Number(editVehicle.hoursAtPurchase),
-      hoursAtPurchase: Number(editVehicle.hoursAtPurchase),
-      manualAddedHours: Number(editVehicle.manualAddedHours),
+      hours: editVehicleUsesHours
+        ? Number(editVehicle.hoursAtPurchase)
+        : 0,
+      hoursAtPurchase: editVehicleUsesHours
+        ? Number(editVehicle.hoursAtPurchase)
+        : 0,
+      manualAddedHours: editVehicleUsesHours
+        ? Number(editVehicle.manualAddedHours)
+        : 0,
       mileage: Number(editVehicle.mileage),
       notes: editVehicle.notes.trim(),
       image: editVehicle.image,
@@ -1660,20 +1680,33 @@ export function VehicleDetail() {
 
           <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-4">
             <div className="flex items-center gap-2 text-orange-400">
-              <Timer className="h-4 w-4" />
-              <span className="text-xs font-medium">Engine</span>
+              {vehicleUsesHours ? (
+                <Timer className="h-4 w-4" />
+              ) : (
+                <Gauge className="h-4 w-4" />
+              )}
+
+              <span className="text-xs font-medium">
+                {vehicleUsesHours ? "Engine" : "Odometer"}
+              </span>
             </div>
+
             <p className="mt-3 text-2xl font-bold text-white">
-              {currentEngineHours.toFixed(1)}
+              {vehicleUsesHours
+                ? `${currentEngineHours.toFixed(1)} h`
+                : `${vehicle.mileage.toFixed(0)} km`}
             </p>
           </div>
         </div>
 
+        {vehicleUsesHours && (
         <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-5">
-          <h2 className="text-base font-semibold text-white">Engine Hours</h2>
+          <h2 className="text-base font-semibold text-white">
+            Engine Hours
+          </h2>
 
           <p className="mt-1 text-sm text-neutral-400">
-            Total engine hours based on purchase hours plus Xtrail rides.
+            Total engine hours based on purchase hours, XTrail rides, and manual additions.
           </p>
 
           <div className="mt-4 grid grid-cols-2 gap-3">
@@ -1688,7 +1721,7 @@ export function VehicleDetail() {
 
             <div className="rounded-xl bg-neutral-950 px-3 py-3">
               <p className="text-xs uppercase tracking-wide text-neutral-500">
-                Xtrail
+                XTrail
               </p>
               <p className="mt-2 text-sm font-semibold text-white">
                 {totalRideHours.toFixed(1)} h
@@ -1714,6 +1747,7 @@ export function VehicleDetail() {
             </div>
           </div>
         </div>
+      )}
 
         {/* Maintenance Status */}
         <div
@@ -2479,35 +2513,39 @@ export function VehicleDetail() {
               </p>
             </div>
 
-            <div className="rounded-xl bg-neutral-950 px-4 py-3">
-              <p className="text-xs uppercase tracking-wide text-neutral-400">
-                Hours at purchase
-              </p>
+            {vehicleUsesHours && (
+              <div className="rounded-xl bg-neutral-950 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-neutral-400">
+                  Hours at purchase
+                </p>
 
-              <p className="mt-2 text-sm font-medium text-white">
-                {hoursAtPurchase.toFixed(1)}
-              </p>
-            </div>
-
-            <div className="rounded-xl bg-neutral-950 px-4 py-3">
-              <p className="text-xs uppercase tracking-wide text-neutral-400">
-                Mileage
-              </p>
-
-              <p className="mt-2 text-sm font-medium text-white">
-                {vehicle.mileage}
-              </p>
-            </div>
+                <p className="mt-2 text-sm font-medium text-white">
+                  {hoursAtPurchase.toFixed(1)} h
+                </p>
+              </div>
+            )}
 
             <div className="rounded-xl bg-neutral-950 px-4 py-3">
               <p className="text-xs uppercase tracking-wide text-neutral-400">
-                Manual added hours
+                {vehicle.type === "4x4" ? "Current KM" : "Mileage / KM"}
               </p>
 
               <p className="mt-2 text-sm font-medium text-white">
-                {manualAddedHours.toFixed(1)}
+                {vehicle.mileage.toFixed(0)} km
               </p>
             </div>
+
+            {vehicleUsesHours && (
+              <div className="rounded-xl bg-neutral-950 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-neutral-400">
+                  Manual added hours
+                </p>
+
+                <p className="mt-2 text-sm font-medium text-white">
+                  {manualAddedHours.toFixed(1)} h
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -2701,49 +2739,57 @@ export function VehicleDetail() {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-sm font-medium text-neutral-300">
-                    Hours at purchase
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.1"
-                    value={editVehicle.hoursAtPurchase}
-                    onChange={(event) =>
-                      setEditVehicle((prev) => ({
-                        ...prev,
-                        hoursAtPurchase: Number(event.target.value),
-                      }))
-                    }
-                    className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
-                  />
-                </div>
+              {editVehicleUsesHours && (
+                <>
+                  <div>
+                    <label className="text-sm font-medium text-neutral-300">
+                      Hours at purchase
+                    </label>
 
-                <div>
-                  <label className="text-sm font-medium text-neutral-300">
-                    Manual hours
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.1"
-                    value={editVehicle.manualAddedHours}
-                    onChange={(event) =>
-                      setEditVehicle((prev) => ({
-                        ...prev,
-                        manualAddedHours: Number(event.target.value),
-                      }))
-                    }
-                    className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
-                  />
-                </div>
-              </div>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={editVehicle.hoursAtPurchase}
+                      onChange={(event) =>
+                        setEditVehicle((prev) => ({
+                          ...prev,
+                          hoursAtPurchase: Number(event.target.value),
+                        }))
+                      }
+                      className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
+                    />
+                  </div>
 
-              <div>
+                  <div>
+                    <label className="text-sm font-medium text-neutral-300">
+                      Manual added hours
+                    </label>
+
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={editVehicle.manualAddedHours}
+                      onChange={(event) =>
+                        setEditVehicle((prev) => ({
+                          ...prev,
+                          manualAddedHours: Number(event.target.value),
+                        }))
+                      }
+                      className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className={editVehicleUsesHours ? "" : "col-span-2"}>
                 <label className="text-sm font-medium text-neutral-300">
-                  Mileage
+                  {editVehicle.type === "4x4"
+                    ? "Current KM"
+                    : "Mileage / KM"}
                 </label>
+
                 <input
                   type="number"
                   min="0"
@@ -2756,29 +2802,37 @@ export function VehicleDetail() {
                   }
                   className="mt-1 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
                 />
-              </div>
 
-              <div>
-                <label className="text-sm font-medium text-neutral-300">
-                  Vehicle Image
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(event) => handleEditVehicleImageUpload(event, "image")}
-                  className="mt-2 block w-full text-sm text-neutral-400 file:mr-4 file:rounded-xl file:border-0 file:bg-neutral-800 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-neutral-700"
-                />
-
-                {editVehicle.image && (
-                  <div className="mt-3 h-24 w-24 overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900">
-                    <img
-                      src={editVehicle.image}
-                      alt="Vehicle preview"
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                )}
+                <p className="mt-1 text-xs text-neutral-500">
+                  {editVehicleUsesHours
+                    ? "Optional distance reading for this vehicle."
+                    : "Main usage reading for this vehicle type."}
+                </p>
               </div>
+            </div>
+
+              
+            <div>
+              <label className="text-sm font-medium text-neutral-300">
+                Vehicle Image
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(event) => handleEditVehicleImageUpload(event, "image")}
+                className="mt-2 block w-full text-sm text-neutral-400 file:mr-4 file:rounded-xl file:border-0 file:bg-neutral-800 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-neutral-700"
+              />
+
+              {editVehicle.image && (
+                <div className="mt-3 h-24 w-24 overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900">
+                  <img
+                    src={editVehicle.image}
+                    alt="Vehicle preview"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              )}
+            </div>
 
               <div>
                 <label className="text-sm font-medium text-neutral-300">

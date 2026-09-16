@@ -1,4 +1,8 @@
-import { Link, useParams } from "react-router";
+import {
+  Link,
+  useLocation,
+  useParams,
+} from "react-router";
 import {
   DirtBikeIcon,
   DualSportIcon,
@@ -14,8 +18,6 @@ import {
   Route,
   Mountain,
   Bike,
-  Car,
-  Truck,
   Lock,
   ArrowLeft,
   Bookmark,
@@ -29,6 +31,8 @@ import { useEffect, useMemo, useState } from "react";
 import { type CompletedTrail } from "../types/completedTrail";
 import { type SavedTrail } from "../types/savedTrail";
 import { useNotification } from "../context/NotificationContext";
+import { useUserAccess } from "../context/UserAccessContext";
+import { getSavedTrailsAccess } from "../lib/accessControl";
 
 function getDifficultyStyles(difficulty: Trail["difficulty"]) {
   switch (difficulty) {
@@ -43,6 +47,10 @@ function getDifficultyStyles(difficulty: Trail["difficulty"]) {
     default:
       return "bg-zinc-500/15 text-zinc-400 border-zinc-500/20";
   }
+}
+
+function feetToMeters(feet: number) {
+  return Math.round(feet * 0.3048);
 }
 
 const getVehicleIcon = (vehicle: string) => {
@@ -70,9 +78,25 @@ const getVehicleIcon = (vehicle: string) => {
   }
 };
 
+type TrailDetailNavigationState = {
+  from?: string;
+  backLabel?: string;
+};
+
 export function TrailDetail() {
   const { showNotification } = useNotification();
+  const { currentUserAccess } = useUserAccess();
   const { id } = useParams();
+  const location = useLocation();
+
+  const navigationState =
+    location.state as TrailDetailNavigationState | null;
+
+  const backTarget =
+    navigationState?.from ?? "/";
+
+  const backLabel =
+    navigationState?.backLabel ?? "Back to Trails";
   const [completedTrails, setCompletedTrails] = useState<CompletedTrail[]>([]);
   const [savedTrails, setSavedTrails] = useState<SavedTrail[]>([]);
   const [showSendInXtrail, setShowSendInXtrail] = useState(false);
@@ -128,6 +152,17 @@ export function TrailDetail() {
     return savedTrails.some((savedTrail) => savedTrail.trailId === trail.id);
   }, [savedTrails, trail]);
 
+  const uniqueSavedTrailCount = useMemo(() => {
+    return new Set(
+      savedTrails.map((savedTrail) => savedTrail.trailId)
+    ).size;
+  }, [savedTrails]);
+
+  const savedTrailsAccess = getSavedTrailsAccess(
+    currentUserAccess,
+    uniqueSavedTrailCount
+  );
+
   const mockFriends = [
     { id: "friend-1", name: "Liam Carter" },
     { id: "friend-2", name: "Zane Jacobs" },
@@ -143,6 +178,7 @@ export function TrailDetail() {
     if (!trail) return;
 
     try {
+      // If this trail is already saved, always allow the user to remove it.
       if (isTrailSaved) {
         const updatedSavedTrails = savedTrails.filter(
           (savedTrail) => savedTrail.trailId !== trail.id
@@ -152,10 +188,31 @@ export function TrailDetail() {
           "xtrail-saved-trails",
           JSON.stringify(updatedSavedTrails)
         );
+
         setSavedTrails(updatedSavedTrails);
+
+        showNotification({
+          title: "Trail removed",
+          message: `${trail.name} was removed from your saved trails.`,
+          variant: "info",
+        });
+
         return;
       }
 
+      // Free users cannot save another trail once their limit is reached.
+      if (savedTrailsAccess.isLimitReached) {
+        showNotification({
+          title: "Saved trail limit reached",
+          message:
+            "Free Plan users can save up to 5 trails. Remove a saved trail or subscribe to the Pro Plan for unlimited saved trails.",
+          variant: "warning",
+        });
+
+        return;
+      }
+
+      // The trail is not already saved and the user has room to save it.
       const newSavedTrail: SavedTrail = {
         id: crypto.randomUUID(),
         trailId: trail.id,
@@ -169,15 +226,31 @@ export function TrailDetail() {
         savedAt: new Date().toISOString(),
       };
 
-      const updatedSavedTrails = [newSavedTrail, ...savedTrails];
+      const updatedSavedTrails = [
+        newSavedTrail,
+        ...savedTrails,
+      ];
 
       localStorage.setItem(
         "xtrail-saved-trails",
         JSON.stringify(updatedSavedTrails)
       );
+
       setSavedTrails(updatedSavedTrails);
+
+      showNotification({
+        title: "Trail saved",
+        message: `${trail.name} was added to your saved trails.`,
+        variant: "success",
+      });
     } catch (error) {
       console.error("Failed to toggle saved trail:", error);
+
+      showNotification({
+        title: "Could not update saved trail",
+        message: "Unable to update your saved trails right now.",
+        variant: "error",
+      });
     }
   };
 
@@ -217,7 +290,15 @@ export function TrailDetail() {
         variant: "success",
       });
     } catch (error) {
+      if (
+        error instanceof Error &&
+        error.name === "AbortError"
+      ) {
+        return;
+      }
+
       console.error("Failed to share trail:", error);
+
       showNotification({
         title: "Share failed",
         message: "Unable to share this trail right now.",
@@ -286,11 +367,11 @@ export function TrailDetail() {
       <div className="min-h-screen bg-neutral-950 px-4 py-8 text-white">
         <div className="mx-auto max-w-3xl">
           <Link
-            to="/"
+            to={backTarget}
             className="mb-6 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
           >
             <X className="h-4 w-4" />
-            Back to trails
+            {backLabel}
           </Link>
 
           <div className="rounded-3xl border border-neutral-800 bg-neutral-900 p-6">
@@ -309,11 +390,11 @@ export function TrailDetail() {
       <div className="mx-auto max-w-4xl">
         <div className="px-4 pt-4">
           <Link
-            to="/"
+            to={backTarget}
             className="mb-6 inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-white"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to trails
+            {backLabel}
           </Link>
         </div>
 
@@ -398,7 +479,7 @@ export function TrailDetail() {
                   <span className="text-xs">Elevation</span>
                 </div>
                 <p className="mt-2 text-xl font-bold text-white">
-                  {trail.elevation} ft
+                  {feetToMeters(trail.elevation)} m
                 </p>
               </div>
 
@@ -416,11 +497,11 @@ export function TrailDetail() {
             {/* Action Buttons */}
             <div className="space-y-3">
               <Link
-                to={`/?startTrail=${trail.id}`}
+                to={`/record?trailId=${trail.id}`}
                 className="inline-flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl bg-orange-500 px-4 py-3 text-base font-semibold text-black transition hover:bg-orange-400"
               >
                 <Navigation className="h-4 w-4" />
-                Start Trail
+                Begin Ride
               </Link>
 
               <div className="grid grid-cols-3 gap-3">
@@ -544,14 +625,28 @@ export function TrailDetail() {
                   <div className="rounded-2xl bg-neutral-800/80 p-4">
                     <p className="text-xs text-neutral-400">High Point</p>
                     <p className="mt-2 text-lg font-semibold text-white">
-                      {Math.max(...trail.elevationProfile.map((point) => point.elevation))} ft
+                      {feetToMeters(
+                        Math.max(
+                          ...trail.elevationProfile.map(
+                            (point) => point.elevation
+                          )
+                        )
+                      )}{" "}
+                      m
                     </p>
                   </div>
 
                   <div className="rounded-2xl bg-neutral-800/80 p-4">
                     <p className="text-xs text-neutral-400">Low Point</p>
                     <p className="mt-2 text-lg font-semibold text-white">
-                      {Math.min(...trail.elevationProfile.map((point) => point.elevation))} ft
+                      {feetToMeters(
+                        Math.min(
+                          ...trail.elevationProfile.map(
+                            (point) => point.elevation
+                          )
+                        )
+                      )}{" "}
+                      m
                     </p>
                   </div>
 

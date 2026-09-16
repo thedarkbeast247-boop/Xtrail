@@ -1,8 +1,14 @@
 import type { ReactNode } from "react";
-import { createBrowserRouter } from "react-router";
+import {
+  Navigate,
+  createBrowserRouter,
+} from "react-router";
 
 import { Layout } from "./components/Layout";
 import { RequireAuth } from "./components/auth/RequireAuth";
+import { useUserAccess } from "./context/UserAccessContext";
+import { isGlobalAdmin } from "./lib/accessControl";
+import { devToolsEnabled } from "./lib/devTools";
 
 import { Home } from "./pages/Home";
 import { TrailDetail } from "./pages/TrailDetail";
@@ -39,6 +45,30 @@ function protectedPage(page: ReactNode) {
   return (
     <RequireAuth>
       <Layout>{page}</Layout>
+    </RequireAuth>
+  );
+}
+
+function OwnerOnly({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const { currentUserAccess } = useUserAccess();
+
+  if (!isGlobalAdmin(currentUserAccess)) {
+    return <Navigate to="/profile" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function ownerProtectedPage(page: ReactNode) {
+  return (
+    <RequireAuth>
+      <OwnerOnly>
+        <Layout>{page}</Layout>
+      </OwnerOnly>
     </RequireAuth>
   );
 }
@@ -136,12 +166,19 @@ export const router = createBrowserRouter([
     path: "/admin/users",
     Component: () => protectedPage(<AdminUsers />),
   },
-  {
-    path: "/dev/access-tester",
-    Component: () => protectedPage(<DevAccessTester />),
-  },
+  ...(devToolsEnabled
+    ? [
+        {
+          path: "/dev/access-tester",
+          Component: () =>
+            protectedPage(<DevAccessTester />),
+        },
+      ]
+    : []),
+
   {
     path: "/dev/data-transfer",
-    Component: () => protectedPage(<DevDataTransfer />),
+    Component: () =>
+      ownerProtectedPage(<DevDataTransfer />),
   },
 ]);

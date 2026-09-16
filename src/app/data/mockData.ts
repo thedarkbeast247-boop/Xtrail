@@ -1,235 +1,5 @@
 import { Trail, TrailType, VehicleClass } from "../types/trail";
 
-export interface Ride {
-  id: string;
-  trailName: string;
-  date: string;
-  distance: number;
-  duration: number;
-  avgSpeed: number;
-  maxSpeed: number;
-  elevation: number;
-  vehicleClass: VehicleClass;
-}
-
-export interface User {
-  name: string;
-  email: string;
-  memberSince: string;
-  vehicleClasses: VehicleClass[];
-  isPremium: boolean;
-  ridesThisMonth: number;
-  totalRides: number;
-  totalDistance: number;
-}
-
-export interface Achievement {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  unlocked: boolean;
-  unlockedDate?: string;
-  category: "distance" | "trails" | "time" | "special";
-}
-
-export interface VehicleProfile {
-  id: string;
-  name: string;
-  type: VehicleClass;
-  imageUrl?: string;
-  color: string;
-  stats: {
-    totalHours: number;
-    tripsCompleted: number;
-    trailsCompleted: number;
-    distanceCovered: number;
-    lastRideDate: string;
-  };
-  achievements: Achievement[];
-  savedTrails: string[];
-  completedTrails: string[];
-}
-
-export const mockUser: User = {
-  name: "Alex Morgan",
-  email: "alex@example.com",
-  memberSince: "2024-01-15",
-  vehicleClasses: ["ATV", "4x4", "Dual-Sport"],
-  isPremium: false,
-  ridesThisMonth: 3,
-  totalRides: 24,
-  totalDistance: 342.5,
-};
-
-export const mockVehicleProfiles: VehicleProfile[] = [
-  {
-    id: "1",
-    name: "Honda 450X",
-    type: "ATV",
-    color: "#ef4444",
-    stats: {
-      totalHours: 47.5,
-      tripsCompleted: 12,
-      trailsCompleted: 8,
-      distanceCovered: 156.3,
-      lastRideDate: "2026-03-28",
-    },
-    achievements: [
-      {
-        id: "a1",
-        name: "First Ride",
-        description: "Complete your first ride",
-        icon: "Award",
-        unlocked: true,
-        unlockedDate: "2026-01-20",
-        category: "special",
-      },
-      {
-        id: "a2",
-        name: "100 Miles",
-        description: "Ride 100 miles total",
-        icon: "TrendingUp",
-        unlocked: true,
-        unlockedDate: "2026-03-15",
-        category: "distance",
-      },
-      {
-        id: "a3",
-        name: "Trail Explorer",
-        description: "Complete 5 different trails",
-        icon: "MapPin",
-        unlocked: true,
-        unlockedDate: "2026-02-28",
-        category: "trails",
-      },
-      {
-        id: "a4",
-        name: "50 Hours",
-        description: "Ride for 50 total hours",
-        icon: "Clock",
-        unlocked: false,
-        category: "time",
-      },
-    ],
-    savedTrails: ["2", "4", "6"],
-    completedTrails: ["1", "3", "5"],
-  },
-  {
-    id: "2",
-    name: "Toyota Tacoma",
-    type: "4x4",
-    color: "#3b82f6",
-    stats: {
-      totalHours: 89.2,
-      tripsCompleted: 18,
-      trailsCompleted: 12,
-      distanceCovered: 387.8,
-      lastRideDate: "2026-04-02",
-    },
-    achievements: [
-      {
-        id: "b1",
-        name: "First Ride",
-        description: "Complete your first ride",
-        icon: "Award",
-        unlocked: true,
-        unlockedDate: "2025-12-10",
-        category: "special",
-      },
-      {
-        id: "b2",
-        name: "100 Miles",
-        description: "Ride 100 miles total",
-        icon: "TrendingUp",
-        unlocked: true,
-        unlockedDate: "2026-01-05",
-        category: "distance",
-      },
-      {
-        id: "b3",
-        name: "250 Miles",
-        description: "Ride 250 miles total",
-        icon: "Target",
-        unlocked: true,
-        unlockedDate: "2026-02-18",
-        category: "distance",
-      },
-      {
-        id: "b4",
-        name: "Trail Master",
-        description: "Complete 10 different trails",
-        icon: "Star",
-        unlocked: true,
-        unlockedDate: "2026-03-25",
-        category: "trails",
-      },
-      {
-        id: "b5",
-        name: "50 Hours",
-        description: "Ride for 50 total hours",
-        icon: "Clock",
-        unlocked: true,
-        unlockedDate: "2026-03-01",
-        category: "time",
-      },
-      {
-        id: "b6",
-        name: "100 Hours",
-        description: "Ride for 100 total hours",
-        icon: "Trophy",
-        unlocked: false,
-        category: "time",
-      },
-    ],
-    savedTrails: ["1", "3", "5"],
-    completedTrails: ["2", "4", "6"],
-  },
-  {
-    id: "3",
-    name: "Yamaha WR250F",
-    type: "Dual-Sport",
-    color: "#8b5cf6",
-    stats: {
-      totalHours: 24.8,
-      tripsCompleted: 7,
-      trailsCompleted: 5,
-      distanceCovered: 98.4,
-      lastRideDate: "2026-03-18",
-    },
-    achievements: [
-      {
-        id: "c1",
-        name: "First Ride",
-        description: "Complete your first ride",
-        icon: "Award",
-        unlocked: true,
-        unlockedDate: "2026-02-05",
-        category: "special",
-      },
-      {
-        id: "c2",
-        name: "50 Miles",
-        description: "Ride 50 miles total",
-        icon: "TrendingUp",
-        unlocked: true,
-        unlockedDate: "2026-03-10",
-        category: "distance",
-      },
-      {
-        id: "c3",
-        name: "100 Miles",
-        description: "Ride 100 miles total",
-        icon: "Target",
-        unlocked: false,
-        category: "distance",
-      },
-    ],
-    savedTrails: ["2", "6"],
-    completedTrails: ["1", "5"],
-  },
-];
-
 export const mockTrails: Trail[] = [
   {
     id: "1",
@@ -257,12 +27,12 @@ export const mockTrails: Trail[] = [
     pathData:
       "M 20,35 Q 30,25 40,30 T 60,28 T 80,35 T 100,30 L 110,40 Q 120,50 110,60",
     elevationProfile: [
-      { distance: 0, elevation: 4200 },
-      { distance: 2.5, elevation: 4450 },
-      { distance: 5.0, elevation: 4600 },
-      { distance: 7.5, elevation: 4900 },
-      { distance: 10.0, elevation: 4750 },
-      { distance: 12.3, elevation: 5050 },
+      { distance: 0, elevation: 1280 },
+      { distance: 2.5, elevation: 1356 },
+      { distance: 5.0, elevation: 1402 },
+      { distance: 7.5, elevation: 1494 },
+      { distance: 10.0, elevation: 1448 },
+      { distance: 12.3, elevation: 1539 },
     ],
     popularity: 8,
   },
@@ -293,13 +63,13 @@ export const mockTrails: Trail[] = [
     pathData:
       "M 15,80 Q 20,70 25,75 T 35,72 Q 45,68 50,75 T 65,78 L 75,70 Q 85,65 90,70",
     elevationProfile: [
-      { distance: 0, elevation: 3200 },
-      { distance: 1.5, elevation: 3600 },
-      { distance: 3.0, elevation: 3950 },
-      { distance: 4.5, elevation: 4100 },
-      { distance: 6.0, elevation: 4250 },
-      { distance: 7.5, elevation: 4350 },
-      { distance: 8.5, elevation: 4400 },
+      { distance: 0, elevation: 975 },
+      { distance: 1.5, elevation: 1097 },
+      { distance: 3.0, elevation: 1204 },
+      { distance: 4.5, elevation: 1250 },
+      { distance: 6.0, elevation: 1295 },
+      { distance: 7.5, elevation: 1326 },
+      { distance: 8.5, elevation: 1341 },
     ],
     popularity: 9,
   },
@@ -412,42 +182,6 @@ export const mockTrails: Trail[] = [
     pathData:
       "M 245,55 Q 255,50 265,53 T 285,56 Q 295,60 300,56 T 315,58 L 325,63",
     popularity: 5,
-  },
-];
-
-export const mockRecentRides: Ride[] = [
-  {
-    id: "1",
-    trailName: "Desert Canyon Run",
-    date: "2026-03-20",
-    distance: 12.3,
-    duration: 85,
-    avgSpeed: 8.7,
-    maxSpeed: 24.3,
-    elevation: 850,
-    vehicleClass: "ATV",
-  },
-  {
-    id: "2",
-    trailName: "Forest Loop",
-    date: "2026-03-15",
-    distance: 15.2,
-    duration: 110,
-    avgSpeed: 8.3,
-    maxSpeed: 18.5,
-    elevation: 450,
-    vehicleClass: "4x4",
-  },
-  {
-    id: "3",
-    trailName: "Backwoods Trail",
-    date: "2026-03-08",
-    distance: 10.1,
-    duration: 95,
-    avgSpeed: 6.4,
-    maxSpeed: 15.2,
-    elevation: 600,
-    vehicleClass: "Dual-Sport",
   },
 ];
 

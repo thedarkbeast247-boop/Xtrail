@@ -47,6 +47,12 @@ export function SavedTrails() {
   const lockedSavedTrailCount =
     savedTrailItemAccess.lockedIds.length;
 
+    const displayedSavedTrails = [...savedTrails].sort(
+      (a, b) =>
+        new Date(b.savedAt).getTime() -
+        new Date(a.savedAt).getTime()
+    );
+
   useEffect(() => {
     const storedSavedTrails = localStorage.getItem("xtrail-saved-trails");
 
@@ -212,7 +218,7 @@ export function SavedTrails() {
           </div>
         ) : (
           <div className="space-y-3">
-            {savedTrails.map((savedTrail) => {
+            {displayedSavedTrails.map((savedTrail) => {
               const isLocked =
                 !savedTrailItemAccess.isItemUnlocked(savedTrail.id);
 
@@ -228,6 +234,10 @@ export function SavedTrails() {
                   {!isLocked && (
                     <Link
                       to={`/trail/${savedTrail.trailId}`}
+                      state={{
+                        from: "/saved-trails",
+                        backLabel: "Back to Saved Trails",
+                      }}
                       aria-label={`Open ${savedTrail.trailName}`}
                       className="absolute inset-0 z-0"
                     />
@@ -271,6 +281,18 @@ export function SavedTrails() {
                             </Button>
                           </Link>
                         </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={(event) =>
+                            handleRemoveSavedTrail(event, savedTrail.id)
+                          }
+                          className="mt-2 w-full text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Remove Saved Trail
+                        </Button>
                       </div>
                     </div>
                   )}

@@ -181,7 +181,7 @@ export function RideHistory() {
                       </p>
 
                       <p className="mt-1 text-xs leading-5 text-neutral-400">
-                        Your older rides remain safely stored. Subscribe to the
+                        Your extra rides remain safely stored. Subscribe to the
                         Pro Plan to unlock your complete ride history.
                       </p>
                     </>
@@ -192,8 +192,8 @@ export function RideHistory() {
                       </p>
 
                       <p className="mt-1 text-xs leading-5 text-neutral-400">
-                        Free Plan users can keep up to{" "}
-                        {FREE_PLAN_RIDE_HISTORY_LIMIT} rides unlocked.
+                        Free Plan users can access up to{" "}
+                        {FREE_PLAN_RIDE_HISTORY_LIMIT} rides in Ride History.
                       </p>
                     </>
                   )}

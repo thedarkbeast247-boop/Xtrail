@@ -40,6 +40,7 @@ import {
 } from "../components/ui/select";
 import { useVehicles } from "../context/VehicleContext";
 import type { Vehicle, VehicleType } from "../types/vehicle";
+import type { SavedRide } from "../utils/rideStats";
 import { useNotification } from "../context/NotificationContext";
 import { useUserAccess } from "../context/UserAccessContext";
 import {
@@ -98,21 +99,28 @@ function getGarageSetupCompletionScore(vehicle: {
   bannerImage?: string;
   color?: string;
 }) {
+  const usesEngineHours =
+    vehicleUsesEngineHours(vehicle.type ?? "");
+
+  const hasPrimaryUsage =
+    usesEngineHours
+      ? Number(vehicle.hoursAtPurchase ?? vehicle.hours ?? 0) > 0
+      : Number(vehicle.mileage ?? 0) > 0;
+
   const completedItems = [
     Boolean(vehicle.name?.trim()),
     Boolean(vehicle.type),
     Boolean(vehicle.brand?.trim()),
     Boolean(vehicle.model?.trim()),
     Boolean(vehicle.year),
-    Number(vehicle.hoursAtPurchase ?? vehicle.hours ?? 0) > 0,
-    Number(vehicle.mileage ?? 0) > 0,
+    hasPrimaryUsage,
     Boolean(vehicle.notes?.trim()),
     Boolean(vehicle.image),
     Boolean(vehicle.bannerImage),
     Boolean(vehicle.color),
   ].filter(Boolean).length;
 
-  return Math.round((completedItems / 11) * 100);
+  return Math.round((completedItems / 10) * 100);
 }
 
 function getReadyStatus(summary: {
@@ -192,6 +200,25 @@ export function Garage() {
 } = useVehicles();
 
   const { getServicesForVehicle } = useServices();
+
+  const [savedRides, setSavedRides] = useState<SavedRide[]>([]);
+
+  useEffect(() => {
+    const storedSavedRides = localStorage.getItem("xtrail-saved-rides");
+
+    if (!storedSavedRides) {
+      setSavedRides([]);
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(storedSavedRides) as SavedRide[];
+      setSavedRides(parsed);
+    } catch (error) {
+      console.error("Failed to load saved rides:", error);
+      setSavedRides([]);
+    }
+  }, []);
   
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -299,6 +326,27 @@ export function Garage() {
   const newVehicleUsesHours = vehicleUsesEngineHours(newVehicle.type);
 
   const editVehicleUsesHours = vehicleUsesEngineHours(editVehicle.type);
+
+  const getCurrentVehicleHours = (vehicle: Vehicle) => {
+    if (!vehicleUsesEngineHours(vehicle.type)) {
+      return 0;
+    }
+
+    const hoursAtPurchase =
+      vehicle.hoursAtPurchase ?? vehicle.hours ?? 0;
+
+    const manualAddedHours =
+      vehicle.manualAddedHours ?? 0;
+
+    const xtrailRideHours = savedRides
+      .filter((ride) => ride.vehicleId === vehicle.id)
+      .reduce(
+        (sum, ride) => sum + ride.durationSeconds / 3600,
+        0
+      );
+
+    return hoursAtPurchase + manualAddedHours + xtrailRideHours;
+  };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -485,9 +533,15 @@ export function Garage() {
       brand: newVehicle.brand.trim(),
       model: newVehicle.model.trim(),
       year: Number(newVehicle.year),
-      hours: Number(newVehicle.hoursAtPurchase),
-      hoursAtPurchase: Number(newVehicle.hoursAtPurchase),
-      manualAddedHours: Number(newVehicle.manualAddedHours),
+      hours: newVehicleUsesHours
+        ? Number(newVehicle.hoursAtPurchase)
+        : 0,
+      hoursAtPurchase: newVehicleUsesHours
+        ? Number(newVehicle.hoursAtPurchase)
+        : 0,
+      manualAddedHours: newVehicleUsesHours
+        ? Number(newVehicle.manualAddedHours)
+        : 0,
       mileage: Number(newVehicle.mileage),
       notes: newVehicle.notes.trim(),
       color: newVehicle.color,
@@ -541,9 +595,15 @@ export function Garage() {
       brand: editVehicle.brand.trim(),
       model: editVehicle.model.trim(),
       year: Number(editVehicle.year),
-      hours: Number(editVehicle.hoursAtPurchase),
-      hoursAtPurchase: Number(editVehicle.hoursAtPurchase),
-      manualAddedHours: Number(editVehicle.manualAddedHours),
+      hours: editVehicleUsesHours
+        ? Number(editVehicle.hoursAtPurchase)
+        : 0,
+      hoursAtPurchase: editVehicleUsesHours
+        ? Number(editVehicle.hoursAtPurchase)
+        : 0,
+      manualAddedHours: editVehicleUsesHours
+        ? Number(editVehicle.manualAddedHours)
+        : 0,
       mileage: Number(editVehicle.mileage),
       notes: editVehicle.notes.trim(),
       color: editVehicle.color,
@@ -592,9 +652,15 @@ export function Garage() {
       brand: vehicle.brand,
       model: vehicle.model,
       year: vehicle.year,
-      hours: vehicle.hoursAtPurchase ?? vehicle.hours,
-      hoursAtPurchase: vehicle.hoursAtPurchase ?? vehicle.hours,
-      manualAddedHours: vehicle.manualAddedHours ?? 0,
+      hours: vehicleUsesEngineHours(vehicle.type)
+        ? vehicle.hoursAtPurchase ?? vehicle.hours
+        : 0,
+      hoursAtPurchase: vehicleUsesEngineHours(vehicle.type)
+        ? vehicle.hoursAtPurchase ?? vehicle.hours
+        : 0,
+      manualAddedHours: vehicleUsesEngineHours(vehicle.type)
+        ? vehicle.manualAddedHours ?? 0
+        : 0,
       mileage: vehicle.mileage,
       notes: vehicle.notes ?? "",
       color: vehicle.color ?? "#ef4444",
@@ -638,7 +704,17 @@ export function Garage() {
       }
 
       if (garageSort === "hours_high") {
-        return (b.hours ?? 0) - (a.hours ?? 0);
+        const aUsesHours = vehicleUsesEngineHours(a.type);
+        const bUsesHours = vehicleUsesEngineHours(b.type);
+
+        if (aUsesHours !== bUsesHours) {
+          return aUsesHours ? -1 : 1;
+        }
+
+        return (
+          getCurrentVehicleHours(b) -
+          getCurrentVehicleHours(a)
+        );
       }
 
       if (garageSort === "km_high") {
@@ -652,8 +728,15 @@ export function Garage() {
     vehicleTypeFilter !== "all" || garageSort !== "active_first";
 
   const garageVehicleInsights = unlockedVehicles.map((vehicle) => {
+    const currentHours = getCurrentVehicleHours(vehicle);
+
+    const vehicleWithCurrentHours = {
+      ...vehicle,
+      hours: currentHours,
+    };
+
     const statuses = calculateMaintenanceStatuses(
-      vehicle,
+      vehicleWithCurrentHours,
       getServicesForVehicle(vehicle.id)
     );
 
@@ -663,6 +746,7 @@ export function Garage() {
 
     return {
       vehicle,
+      currentHours,
       statuses,
       summary,
       setupScore,
@@ -678,7 +762,7 @@ export function Garage() {
   );
 
   const totalHours = unlockedVehicles.reduce(
-    (sum, vehicle) => sum + vehicle.hours,
+    (sum, vehicle) => sum + getCurrentVehicleHours(vehicle),
     0
   );
 
@@ -705,9 +789,16 @@ export function Garage() {
     (a, b) => (b.mileage ?? 0) - (a.mileage ?? 0)
   )[0];
 
-  const highestHourVehicle = [...unlockedVehicles].sort(
-    (a, b) => (b.hours ?? 0) - (a.hours ?? 0)
-  )[0];
+  const highestHourVehicle =
+    unlockedVehicles
+      .filter((vehicle) =>
+        vehicleUsesEngineHours(vehicle.type)
+      )
+      .sort(
+        (a, b) =>
+          getCurrentVehicleHours(b) -
+          getCurrentVehicleHours(a)
+      )[0] ?? null;
 
   const needsAttentionVehicle = garageVehicleInsights.find(
     (item) => item.summary.overdueCount > 0 || item.summary.dueSoonCount > 0
@@ -829,71 +920,86 @@ export function Garage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  {editVehicleUsesHours && (
-                    <>
-                      <div>
-                        <Label className="text-neutral-300">Hours at purchase</Label>
-                        <Input
-                          type="number"
-                          value={editVehicle.hoursAtPurchase}
-                          onChange={(event) =>
-                            setEditVehicle((prev) => ({
-                              ...prev,
-                              hours: Number(event.target.value),
-                              hoursAtPurchase: Number(event.target.value),
-                            }))
-                          }
-                          className="bg-neutral-800 border-neutral-700 text-white mt-1"
-                        />
-                        <p className="text-xs text-neutral-500">
-                          Engine hours already on the vehicle when you bought it.
-                        </p>
-                      </div>
+                {newVehicleUsesHours && (
+                  <>
+                    <div>
+                      <Label className="text-neutral-300">
+                        Hours at purchase
+                      </Label>
 
-                      <div>
-                        <Label className="text-neutral-300">Manual added hours</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.1"
-                          value={editVehicle.manualAddedHours}
-                          onChange={(e) =>
-                            setEditVehicle({
-                              ...editVehicle,
-                              manualAddedHours: Number(e.target.value),
-                            })
-                          }
-                          className="bg-neutral-800 border-neutral-700 text-white mt-1"
-                        />
-                        <p className="mt-1 text-xs text-neutral-500">
-                          Extra engine hours ridden outside Xtrail.
-                        </p>
-                      </div>
-                    </>
-                  )}
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        value={newVehicle.hoursAtPurchase}
+                        onChange={(event) =>
+                          setNewVehicle((prev) => ({
+                            ...prev,
+                            hours: Number(event.target.value),
+                            hoursAtPurchase: Number(event.target.value),
+                          }))
+                        }
+                        className="bg-neutral-800 border-neutral-700 text-white mt-1"
+                      />
 
-                  <div className={editVehicleUsesHours ? "" : "col-span-2"}>
-                    <Label className="text-neutral-300">
-                      {editVehicle.type === "4x4" ? "Current KM" : "Mileage / KM"}
-                    </Label>
-                    <Input
-                      type="number"
-                      value={editVehicle.mileage}
-                      onChange={(e) =>
-                        setEditVehicle({
-                          ...editVehicle,
-                          mileage: Number(e.target.value),
-                        })
-                      }
-                      className="bg-neutral-800 border-neutral-700 text-white mt-1"
-                    />
-                    <p className="mt-1 text-xs text-neutral-500">
-                      {editVehicleUsesHours
-                        ? "Optional distance reading for this vehicle."
-                        : "Main usage reading for this vehicle type."}
-                    </p>
-                  </div>
+                      <p className="mt-1 text-xs text-neutral-500">
+                        Engine hours already on the vehicle when you bought it.
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label className="text-neutral-300">
+                        Manual added hours
+                      </Label>
+
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        value={newVehicle.manualAddedHours}
+                        onChange={(event) =>
+                          setNewVehicle((prev) => ({
+                            ...prev,
+                            manualAddedHours: Number(event.target.value),
+                          }))
+                        }
+                        className="bg-neutral-800 border-neutral-700 text-white mt-1"
+                      />
+
+                      <p className="mt-1 text-xs text-neutral-500">
+                        Extra engine hours ridden outside XTrail.
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                <div className={newVehicleUsesHours ? "" : "col-span-2"}>
+                  <Label className="text-neutral-300">
+                    {newVehicle.type === "4x4"
+                      ? "Current KM"
+                      : "Mileage / KM"}
+                  </Label>
+
+                  <Input
+                    type="number"
+                    min="0"
+                    value={newVehicle.mileage}
+                    onChange={(event) =>
+                      setNewVehicle((prev) => ({
+                        ...prev,
+                        mileage: Number(event.target.value),
+                      }))
+                    }
+                    className="bg-neutral-800 border-neutral-700 text-white mt-1"
+                  />
+
+                  <p className="mt-1 text-xs text-neutral-500">
+                    {newVehicleUsesHours
+                      ? "Optional distance reading for this vehicle."
+                      : "Main usage reading for this vehicle type."}
+                  </p>
                 </div>
+              </div>
 
                 <div>
                   <Label className="text-neutral-300">Notes</Label>
@@ -1019,7 +1125,7 @@ export function Garage() {
           </div>
           <div className="bg-neutral-900/50 border border-neutral-800 rounded-lg p-3 text-center">
             <div className="text-white text-xl mb-0.5">{totalHours.toFixed(0)}</div>
-            <div className="text-neutral-400 text-xs">Hours</div>
+            <div className="text-neutral-400 text-xs">Engine Hours</div>
           </div>
         </div>
       </div>
@@ -1140,13 +1246,15 @@ export function Garage() {
                 {highestHourVehicle && (
                   <div className="flex items-center justify-between rounded-xl border border-neutral-800 bg-neutral-950 px-3 py-3">
                     <div>
-                      <p className="text-xs text-neutral-500">Highest Hours</p>
+                      <p className="text-xs text-neutral-500">
+                        Highest Engine Hours
+                      </p>
                       <p className="text-sm font-semibold text-white">
                         {highestHourVehicle.name}
                       </p>
                     </div>
                     <p className="text-sm font-semibold text-neutral-300">
-                      {highestHourVehicle.hours.toFixed(0)} h
+                      {getCurrentVehicleHours(highestHourVehicle).toFixed(0)} h
                     </p>
                   </div>
                 )}
@@ -1331,10 +1439,19 @@ export function Garage() {
                 const isActive =
                   !isLocked && activeVehicleId === vehicle.id;
 
-            const vehicleMaintenanceStatuses = calculateMaintenanceStatuses(
-              vehicle,
-              getServicesForVehicle(vehicle.id)
-            );
+            const currentVehicleHours =
+              getCurrentVehicleHours(vehicle);
+
+            const vehicleWithCurrentHours = {
+              ...vehicle,
+              hours: currentVehicleHours,
+            };
+
+            const vehicleMaintenanceStatuses =
+              calculateMaintenanceStatuses(
+                vehicleWithCurrentHours,
+                getServicesForVehicle(vehicle.id)
+              );
 
             const vehicleMaintenanceSummary = getMaintenanceReminderSummary(
               vehicleMaintenanceStatuses
@@ -1406,10 +1523,6 @@ export function Garage() {
                     }
                     aria-hidden={isLocked}
                   >
-                    <div
-                      className="absolute inset-x-0 top-0 h-1"
-                      style={{ backgroundColor: color }}
-                    />
                   <div
                     className="absolute inset-x-0 top-0 h-1"
                     style={{ backgroundColor: color }}
@@ -1553,19 +1666,35 @@ export function Garage() {
                     </Button>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 mb-4">
-                    <div className="text-center bg-neutral-950 rounded-lg p-3">
-                      <div className="text-white text-lg mb-0.5">
-                        {vehicle.hours.toFixed(0)}
+                  <div
+                    className={`grid gap-3 mb-4 ${
+                      vehicleUsesEngineHours(vehicle.type)
+                        ? "grid-cols-2"
+                        : "grid-cols-1"
+                    }`}
+                  >
+                    {vehicleUsesEngineHours(vehicle.type) && (
+                      <div className="text-center bg-neutral-950 rounded-lg p-3">
+                        <div className="text-white text-lg mb-0.5">
+                          {currentVehicleHours.toFixed(1)}
+                        </div>
+
+                        <div className="text-neutral-500 text-xs">
+                          hours
+                        </div>
                       </div>
-                      <div className="text-neutral-500 text-xs">hours</div>
-                    </div>
+                    )}
 
                     <div className="text-center bg-neutral-950 rounded-lg p-3">
                       <div className="text-white text-lg mb-0.5">
                         {vehicle.mileage.toFixed(0)}
                       </div>
-                      <div className="text-neutral-500 text-xs">km</div>
+
+                      <div className="text-neutral-500 text-xs">
+                        {vehicle.type === "4x4"
+                          ? "current km"
+                          : "km"}
+                      </div>
                     </div>
                   </div>
 
@@ -1774,60 +1903,86 @@ export function Garage() {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-neutral-300">Hours at purchase</Label>
-                <Input
-                  type="number"
-                  value={editVehicle.hoursAtPurchase}
-                  onChange={(event) =>
-                    setEditVehicle((prev) => ({
-                      ...prev,
-                      hours: Number(event.target.value),
-                      hoursAtPurchase: Number(event.target.value),
-                    }))
-                  }
-                  className="bg-neutral-800 border-neutral-700 text-white mt-1"
-                />
-                <p className="text-xs text-neutral-500">
-                  Engine hours already on the vehicle when you bought it.
-                </p>
-              </div>
+            {editVehicleUsesHours && (
+              <>
+                <div>
+                  <Label className="text-neutral-300">
+                    Hours at purchase
+                  </Label>
 
-              <div>
-                <Label className="text-neutral-300">Manual added hours</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  value={editVehicle.manualAddedHours}
-                  onChange={(e) =>
-                    setEditVehicle({
-                      ...editVehicle,
-                      manualAddedHours: Number(e.target.value),
-                    })
-                  }
-                  className="bg-neutral-800 border-neutral-700 text-white mt-1"
-                />
-                <p className="mt-1 text-xs text-neutral-500">
-                  Extra engine hours ridden outside Xtrail after you bought the vehicle.
-                </p>
-              </div>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={editVehicle.hoursAtPurchase}
+                    onChange={(event) =>
+                      setEditVehicle((prev) => ({
+                        ...prev,
+                        hours: Number(event.target.value),
+                        hoursAtPurchase: Number(event.target.value),
+                      }))
+                    }
+                    className="bg-neutral-800 border-neutral-700 text-white mt-1"
+                  />
 
-              <div>
-                <Label className="text-neutral-300">Mileage</Label>
-                <Input
-                  type="number"
-                  value={editVehicle.mileage}
-                  onChange={(e) =>
-                    setEditVehicle({
-                      ...editVehicle,
-                      mileage: Number(e.target.value),
-                    })
-                  }
-                  className="bg-neutral-800 border-neutral-700 text-white mt-1"
-                />
-              </div>
+                  <p className="mt-1 text-xs text-neutral-500">
+                    Engine hours already on the vehicle when you bought it.
+                  </p>
+                </div>
+
+                <div>
+                  <Label className="text-neutral-300">
+                    Manual added hours
+                  </Label>
+
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={editVehicle.manualAddedHours}
+                    onChange={(event) =>
+                      setEditVehicle((prev) => ({
+                        ...prev,
+                        manualAddedHours: Number(event.target.value),
+                      }))
+                    }
+                    className="bg-neutral-800 border-neutral-700 text-white mt-1"
+                  />
+
+                  <p className="mt-1 text-xs text-neutral-500">
+                    Extra engine hours ridden outside XTrail.
+                  </p>
+                </div>
+              </>
+            )}
+
+            <div className={editVehicleUsesHours ? "" : "col-span-2"}>
+              <Label className="text-neutral-300">
+                {editVehicle.type === "4x4"
+                  ? "Current KM"
+                  : "Mileage / KM"}
+              </Label>
+
+              <Input
+                type="number"
+                min="0"
+                value={editVehicle.mileage}
+                onChange={(event) =>
+                  setEditVehicle((prev) => ({
+                    ...prev,
+                    mileage: Number(event.target.value),
+                  }))
+                }
+                className="bg-neutral-800 border-neutral-700 text-white mt-1"
+              />
+
+              <p className="mt-1 text-xs text-neutral-500">
+                {editVehicleUsesHours
+                  ? "Optional distance reading for this vehicle."
+                  : "Main usage reading for this vehicle type."}
+              </p>
             </div>
+          </div>
 
             <div>
               <Label className="text-neutral-300">Notes</Label>

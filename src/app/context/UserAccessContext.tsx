@@ -59,12 +59,6 @@ interface UserAccessContextValue {
 
 const now = new Date().toISOString();
 
-function getDateAfterDays(days: number) {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return date.toISOString();
-}
-
 function getEmptyFreePlanSelections(): FreePlanSelections {
   return {
     vehicleIds: [],
@@ -90,7 +84,7 @@ function withProAccessDefaults(user: UserAccessProfile): UserAccessProfile {
     ...user,
     proAccessEndedReason: user.proAccessEndedReason ?? null,
     proAccessEndedAt: user.proAccessEndedAt ?? null,
-    proAccessDataDeleteAfter: user.proAccessDataDeleteAfter ?? null,
+    proAccessDataDeleteAfter: null,
     proAccessReviewStatus: user.proAccessReviewStatus ?? "not_required",
     proAccessReviewedAt: user.proAccessReviewedAt ?? null,
     freePlanSelections: {
@@ -385,26 +379,13 @@ function getInitialUserAccessProfiles() {
       (user) => user.id === ownerAccessProfile.id
     );
 
-    const lockedOwnerProfile: UserAccessProfile = {
-      ...ownerAccessProfile,
-      ...storedOwner,
-      id: ownerAccessProfile.id,
-      email: ownerAccessProfile.email,
-      displayName: ownerAccessProfile.displayName,
-      role: "global_admin",
-      accountStatus: "active",
-
-      twoFactorEnabled: true,
-      twoFactorRequired: true,
-      twoFactorRequiredOnFirstLogin: true,
-      twoFactorRequiredForNewDevice: true,
-      twoFactorRequiredForSensitiveActions: true,
-
-      trustedDeviceIds: storedOwner?.trustedDeviceIds ?? [],
-      lastTwoFactorVerifiedAt: storedOwner?.lastTwoFactorVerifiedAt ?? "",
-
-      updatedAt: new Date().toISOString(),
-    };
+    const lockedOwnerProfile = lockOwnerProfile(
+      withProAccessDefaults({
+        ...ownerAccessProfile,
+        ...(storedOwner ?? {}),
+        updatedAt: new Date().toISOString(),
+      })
+    );
 
       const otherProfiles = parsedProfiles
       .filter((user) => user.id !== ownerAccessProfile.id)
@@ -532,10 +513,14 @@ export function UserAccessProvider({ children }: { children: ReactNode }) {
     updateUserAccess(userId, {
       plan: "free",
       subscriptionStatus:
-        reason === "subscription_cancelled" ? "cancelled" : "past_due",
+        reason === "subscription_cancelled"
+          ? "cancelled"
+          : reason === "manual_downgrade"
+          ? "none"
+          : "past_due",
       proAccessEndedReason: reason,
       proAccessEndedAt: new Date().toISOString(),
-      proAccessDataDeleteAfter: getDateAfterDays(90),
+      proAccessDataDeleteAfter: null,
       proAccessReviewStatus: "needs_review",
       proAccessReviewedAt: null,
     });
