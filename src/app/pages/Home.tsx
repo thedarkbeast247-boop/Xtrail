@@ -1,6 +1,28 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { ZoomIn, ZoomOut, Filter, MapPin, Star, Lock, Mountain, Bike, Navigation, X, Compass, Home as HomeIcon, Layers, Locate, TrendingUp, Flame, ChevronDown } from 'lucide-react';
+import {
+  ZoomIn,
+  ZoomOut,
+  Filter,
+  MapPin,
+  Star,
+  Lock,
+  Mountain,
+  Bike,
+  Navigation,
+  X,
+  Compass,
+  Home as HomeIcon,
+  Layers,
+  Locate,
+  TrendingUp,
+  Flame,
+  ChevronDown,
+  Route,
+  CalendarDays,
+  Store,
+  Megaphone,
+} from 'lucide-react';
 import { mockTrails, vehicleClasses, trailTypes } from "../data/mockData";
 import type { VehicleClass, TrailType, Trail } from "../types/trail";
 import { Badge } from '../components/ui/badge';
@@ -9,6 +31,7 @@ import { ElevationProfile } from '../components/ElevationProfile';
 import TrailCard from "../components/TrailCard";
 import { LockedFeatureCard } from "../components/access/LockedFeatureCard";
 import { useUserAccess } from "../context/UserAccessContext";
+import { usePhase2Content } from "../context/Phase2ContentContext";
 import {
   FREE_PLAN_TRAIL_VIEW_LIMIT,
   getTrailDiscoveryAccess,
@@ -91,6 +114,56 @@ function feetToMeters(feet: number) {
 export function Home() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { currentUserAccess } = useUserAccess();
+    const {
+    tracks,
+    events,
+    brands,
+    promotions,
+  } = usePhase2Content();
+
+  const publishedTrackCount =
+    tracks.filter(
+      (track) =>
+        track.publicationStatus === "published"
+    ).length;
+
+  const discoverEventCount =
+    events.filter(
+      (event) =>
+        event.publicationStatus === "published" &&
+        (
+          event.eventStatus === "upcoming" ||
+          event.eventStatus === "ongoing"
+        )
+    ).length;
+
+  const publishedBrands =
+    brands.filter(
+      (brand) =>
+        brand.publicationStatus === "published"
+    );
+
+  const publishedBrandCount =
+    publishedBrands.length;
+
+  const publishedBrandIds =
+    new Set(
+      publishedBrands.map(
+        (brand) => brand.id
+      )
+    );
+
+  const visiblePromotionCount =
+    promotions.filter(
+      (promotion) =>
+        (
+          promotion.status === "active" ||
+          promotion.status === "scheduled"
+        ) &&
+        publishedBrandIds.has(
+          promotion.brandId
+        )
+    ).length;
   const [selectedVehicleClass, setSelectedVehicleClass] = useState<VehicleClass | 'All'>('All');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('All');
   const [selectedTrailType, setSelectedTrailType] = useState<TrailType | 'All'>('All');
@@ -992,6 +1065,139 @@ export function Home() {
           </div>
         )}
       </div>
+
+      {/* XTrail Discovery Hub */}
+      <section className="border-b border-neutral-800 bg-neutral-950 px-4 py-5">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-400">
+            Discover XTrail
+          </p>
+
+          <h2 className="mt-1 text-xl font-bold text-white">
+            Find somewhere to ride
+          </h2>
+
+          <p className="mt-1 text-sm leading-6 text-neutral-400">
+            Explore trails and riding tracks,
+            then find upcoming events and the
+            latest from off-road brands.
+          </p>
+        </div>
+
+        {/* Primary Discovery */}
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          {/* Trails */}
+          <div className="rounded-3xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 to-emerald-500/5 p-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
+              <Mountain className="h-5 w-5" />
+            </div>
+
+            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-emerald-400">
+              Current Discovery
+            </p>
+
+            <h3 className="mt-1 text-lg font-bold text-white">
+              Trails
+            </h3>
+
+            <p className="mt-1 text-xs leading-5 text-neutral-400">
+              {unlockedAreaTrailCount}{" "}
+              {unlockedAreaTrailCount === 1
+                ? "trail"
+                : "trails"}{" "}
+              available in {selectedArea}
+            </p>
+          </div>
+
+          {/* Tracks */}
+          <Link
+            to="/tracks"
+            className="rounded-3xl border border-orange-500/30 bg-gradient-to-br from-orange-500/15 to-orange-500/5 p-4 transition hover:border-orange-400/50 hover:bg-orange-500/10 active:scale-[0.99]"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500/15 text-orange-400">
+              <Route className="h-5 w-5" />
+            </div>
+
+            <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-orange-400">
+              Riding Facilities
+            </p>
+
+            <h3 className="mt-1 text-lg font-bold text-white">
+              Tracks
+            </h3>
+
+            <p className="mt-1 text-xs leading-5 text-neutral-400">
+              {publishedTrackCount}{" "}
+              {publishedTrackCount === 1
+                ? "published track"
+                : "published tracks"}
+            </p>
+          </Link>
+        </div>
+
+        {/* Secondary Discovery */}
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          {/* Events */}
+          <Link
+            to="/events"
+            className="rounded-2xl border border-neutral-800 bg-neutral-900 p-3 transition hover:border-neutral-700 active:scale-[0.99]"
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500/10 text-sky-400">
+              <CalendarDays className="h-4 w-4" />
+            </div>
+
+            <p className="mt-3 text-sm font-semibold text-white">
+              Events
+            </p>
+
+            <p className="mt-1 text-[11px] text-neutral-500">
+              {discoverEventCount}{" "}
+              {discoverEventCount === 1
+                ? "upcoming"
+                : "upcoming"}
+            </p>
+          </Link>
+
+          {/* Brands */}
+          <Link
+            to="/brands"
+            className="rounded-2xl border border-neutral-800 bg-neutral-900 p-3 transition hover:border-neutral-700 active:scale-[0.99]"
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/10 text-violet-400">
+              <Store className="h-4 w-4" />
+            </div>
+
+            <p className="mt-3 text-sm font-semibold text-white">
+              Brands
+            </p>
+
+            <p className="mt-1 text-[11px] text-neutral-500">
+              {publishedBrandCount}{" "}
+              {publishedBrandCount === 1
+                ? "profile"
+                : "profiles"}
+            </p>
+          </Link>
+
+          {/* Releases */}
+          <Link
+            to="/promotions"
+            className="rounded-2xl border border-neutral-800 bg-neutral-900 p-3 transition hover:border-neutral-700 active:scale-[0.99]"
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400">
+              <Megaphone className="h-4 w-4" />
+            </div>
+
+            <p className="mt-3 text-sm font-semibold text-white">
+              Releases
+            </p>
+
+            <p className="mt-1 text-[11px] text-neutral-500">
+              {visiblePromotionCount} active
+            </p>
+          </Link>
+        </div>
+      </section>
 
       {/* Filters Section */}
       <div className="app-scrollbar flex-1 bg-neutral-950 overflow-y-auto">

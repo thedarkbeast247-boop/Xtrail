@@ -5,17 +5,20 @@ import { VehicleProvider } from "./app/context/VehicleContext";
 import { ServiceProvider } from "./app/context/ServiceContext";
 import { UserAccessProvider } from "./app/context/UserAccessContext";
 import { RideRecordingProvider } from "./app/context/RideRecordingContext";
+import { Phase2ContentProvider } from "./app/context/Phase2ContentContext";
 
 import "./styles/index.css";
 
 createRoot(document.getElementById("root")!).render(
   <UserAccessProvider>
-    <VehicleProvider>
-      <ServiceProvider>
-        <RideRecordingProvider>
-          <App />
-        </RideRecordingProvider>
-      </ServiceProvider>
-    </VehicleProvider>
+    <Phase2ContentProvider>
+      <VehicleProvider>
+        <ServiceProvider>
+          <RideRecordingProvider>
+            <App />
+          </RideRecordingProvider>
+        </ServiceProvider>
+      </VehicleProvider>
+    </Phase2ContentProvider>
   </UserAccessProvider>
 );

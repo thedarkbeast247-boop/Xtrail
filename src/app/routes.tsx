@@ -12,6 +12,16 @@ import { devToolsEnabled } from "./lib/devTools";
 
 import { Home } from "./pages/Home";
 import { TrailDetail } from "./pages/TrailDetail";
+import { Tracks } from "./pages/Tracks";
+import { TrackDetail } from "./pages/TrackDetail";
+import { SavedTracks } from "./pages/SavedTracks";
+import { Events } from "./pages/Events";
+import { EventDetail } from "./pages/EventDetail";
+import { Brands } from "./pages/Brands";
+import { BrandDetail } from "./pages/BrandDetail";
+import { Promotions } from "./pages/Promotions";
+import { PromotionDetail } from "./pages/PromotionDetail";
+import { OwnerContent } from "./pages/OwnerContent";
 import { RecordRide } from "./pages/RecordRide";
 import { Subscription } from "./pages/Subscription";
 import { Profile } from "./pages/Profile";
@@ -95,6 +105,42 @@ export const router = createBrowserRouter([
     Component: () => protectedPage(<TrailDetail />),
   },
   {
+  path: "/tracks",
+    Component: () => protectedPage(<Tracks />),
+  },
+  {
+    path: "/track/:id",
+    Component: () => protectedPage(<TrackDetail />),
+  },
+  {
+    path: "/saved-tracks",
+    Component: () => protectedPage(<SavedTracks />),
+  },
+  {
+    path: "/events",
+    Component: () => protectedPage(<Events />),
+  },
+  {
+    path: "/event/:id",
+    Component: () => protectedPage(<EventDetail />),
+  },
+  {
+    path: "/brands",
+    Component: () => protectedPage(<Brands />),
+  },
+  {
+    path: "/brand/:id",
+    Component: () => protectedPage(<BrandDetail />),
+  },
+  {
+    path: "/promotions",
+    Component: () => protectedPage(<Promotions />),
+  },
+  {
+    path: "/promotion/:id",
+    Component: () => protectedPage(<PromotionDetail />),
+  },
+  {
     path: "/record",
     Component: () => protectedPage(<RecordRide />),
   },
@@ -165,6 +211,10 @@ export const router = createBrowserRouter([
   {
     path: "/admin/users",
     Component: () => protectedPage(<AdminUsers />),
+  },
+  {
+    path: "/admin/content",
+    Component: () => ownerProtectedPage(<OwnerContent />),
   },
   ...(devToolsEnabled
     ? [

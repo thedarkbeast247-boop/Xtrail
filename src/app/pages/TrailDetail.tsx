@@ -23,6 +23,7 @@ import {
   Bookmark,
   Share2,
   Navigation,
+  CalendarDays,
   X,
 } from "lucide-react";
 import { mockTrails } from "../data/mockData";
@@ -31,6 +32,7 @@ import { useEffect, useMemo, useState } from "react";
 import { type CompletedTrail } from "../types/completedTrail";
 import { type SavedTrail } from "../types/savedTrail";
 import { useNotification } from "../context/NotificationContext";
+import { usePhase2Content } from "../context/Phase2ContentContext";
 import { useUserAccess } from "../context/UserAccessContext";
 import { getSavedTrailsAccess } from "../lib/accessControl";
 
@@ -85,8 +87,14 @@ type TrailDetailNavigationState = {
 
 export function TrailDetail() {
   const { showNotification } = useNotification();
-  const { currentUserAccess } = useUserAccess();
+
+  const {
+    getEventsForTrail,
+  } = usePhase2Content();
+
   const { id } = useParams();
+  const { currentUserAccess } = useUserAccess();
+  
   const location = useLocation();
 
   const navigationState =
@@ -137,6 +145,27 @@ export function TrailDetail() {
   }, []);
 
   const trail = mockTrails.find((item) => item.id === id);
+
+  const linkedEvents = useMemo(() => {
+    if (!trail) {
+      return [];
+    }
+
+    return getEventsForTrail(trail.id)
+      .filter(
+        (event) =>
+          event.publicationStatus === "published" &&
+          event.eventStatus !== "cancelled"
+      )
+      .sort(
+        (a, b) =>
+          new Date(a.startDate).getTime() -
+          new Date(b.startDate).getTime()
+      );
+  }, [
+    trail,
+    getEventsForTrail,
+  ]);
 
   const isTrailCompleted = useMemo(() => {
     if (!trail) return false;
@@ -570,6 +599,91 @@ export function TrailDetail() {
               </div>
 
               <div className="space-y-6">
+                {/* Upcoming Events */}
+                <section>
+                  <div className="flex items-end justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-400">
+                        Community
+                      </p>
+
+                      <h2 className="mt-1 text-lg font-semibold text-white">
+                        Upcoming Events
+                      </h2>
+                    </div>
+
+                    {linkedEvents.length > 0 && (
+                      <span className="rounded-full bg-neutral-800 px-3 py-1 text-xs text-neutral-400">
+                        {linkedEvents.length}
+                      </span>
+                    )}
+                  </div>
+
+                  {linkedEvents.length === 0 ? (
+                    <div className="mt-4 rounded-3xl border border-dashed border-neutral-800 bg-neutral-900 p-5">
+                      <div className="flex items-start gap-3">
+                        <CalendarDays className="mt-0.5 h-5 w-5 flex-shrink-0 text-neutral-600" />
+
+                        <div>
+                          <p className="text-sm font-semibold text-white">
+                            No events linked yet
+                          </p>
+
+                          <p className="mt-1 text-xs leading-5 text-neutral-500">
+                            Events using this trail will
+                            appear here once they are
+                            published.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-4 space-y-3">
+                      {linkedEvents.map((event) => (
+                        <Link
+                          key={event.id}
+                          to={`/event/${event.id}`}
+                          state={{
+                            from: `/trail/${trail.id}`,
+                            backLabel: "Back to Trail",
+                          }}
+                          className="block rounded-2xl border border-neutral-800 bg-neutral-900 p-4 transition hover:border-orange-500/30"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-500/10 text-orange-400">
+                              <CalendarDays className="h-5 w-5" />
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-semibold text-white">
+                                {event.name}
+                              </p>
+
+                              <p className="mt-1 text-xs text-neutral-500">
+                                {new Date(
+                                  `${event.startDate}T12:00:00`
+                                ).toLocaleDateString("en-ZA", {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                })}
+                                {" • "}
+                                {event.eventType}
+                              </p>
+
+                              <p className="mt-1 truncate text-xs text-neutral-400">
+                                {event.location}
+                                {event.province
+                                  ? `, ${event.province}`
+                                  : ""}
+                              </p>
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </section>
                 {/* Supported Vehicles */}
                 <div>
                   <h2 className="text-lg font-semibold text-white">Supported Vehicles</h2>

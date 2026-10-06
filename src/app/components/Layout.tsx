@@ -70,6 +70,39 @@ export function Layout({
     return location.pathname === path;
   };
 
+  const isDiscoverRoute =
+    location.pathname === "/" ||
+    location.pathname.startsWith("/trail/") ||
+    location.pathname === "/tracks" ||
+    location.pathname.startsWith("/track/") ||
+    location.pathname === "/events" ||
+    location.pathname.startsWith("/event/") ||
+    location.pathname === "/brands" ||
+    location.pathname.startsWith("/brand/") ||
+    location.pathname === "/promotions" ||
+    location.pathname.startsWith("/promotion/");
+
+  const isGarageRoute =
+    location.pathname === "/garage" ||
+    location.pathname.startsWith("/garage/");
+
+  const isProfileRoute =
+    location.pathname === "/profile" ||
+    location.pathname === "/service-log" ||
+    location.pathname === "/friends" ||
+    location.pathname.startsWith("/friends/") ||
+    location.pathname === "/progress" ||
+    location.pathname === "/achievements" ||
+    location.pathname === "/subscription" ||
+    location.pathname === "/account/plan-review" ||
+    location.pathname === "/ride-history" ||
+    location.pathname.startsWith("/ride-history/") ||
+    location.pathname === "/saved-trails" ||
+    location.pathname === "/completed-trails" ||
+    location.pathname === "/saved-tracks" ||
+    location.pathname.startsWith("/admin/") ||
+    location.pathname.startsWith("/dev/");
+
   const handlePauseResumeRide = () => {
     if (isPaused) {
       resumeRide();
@@ -232,19 +265,13 @@ export function Layout({
               <Link
                 to="/"
                 className={`flex flex-col items-center gap-1 px-3 py-2 transition-colors ${
-                  isActive("/") ||
-                  isActive("/trail/1") ||
-                  isActive("/trail/2") ||
-                  isActive("/trail/3") ||
-                  isActive("/trail/4") ||
-                  isActive("/trail/5") ||
-                  isActive("/trail/6")
+                  isDiscoverRoute
                     ? "text-red-500"
                     : "text-neutral-400 hover:text-neutral-200"
                 }`}
               >
                 <Map className="h-6 w-6" />
-                <span className="text-xs">Home</span>
+                <span className="text-xs">Discover</span>
               </Link>
 
               <Link to="/record" className="relative -mt-6">
@@ -266,7 +293,7 @@ export function Layout({
               <Link
                 to="/garage"
                 className={`flex flex-col items-center gap-1 px-3 py-2 transition-colors ${
-                  isActive("/garage")
+                  isGarageRoute
                     ? "text-red-500"
                     : "text-neutral-400 hover:text-neutral-200"
                 }`}
@@ -278,13 +305,7 @@ export function Layout({
               <Link
                 to="/profile"
                 className={`flex flex-col items-center gap-1 px-3 py-2 transition-colors ${
-                  isActive("/profile") ||
-                  isActive("/service-log") ||
-                  isActive("/friends") ||
-                  isActive("/progress") ||
-                  isActive("/achievements") ||
-                  isActive("/subscription") ||
-                  location.pathname.startsWith("/admin")
+                  isProfileRoute
                     ? "text-red-500"
                     : "text-neutral-400 hover:text-neutral-200"
                 }`}
